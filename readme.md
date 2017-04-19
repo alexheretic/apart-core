@@ -90,3 +90,8 @@ And before ending the core sends:
 type: status
 status: dying
 ```
+
+## Dependencies
+* zeromq
+* partclone
+* pigz
