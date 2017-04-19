@@ -26,7 +26,7 @@ Start by invoking the command with a single argument a half-bound ZMQ pair IPC a
 
 ## Messages
 ### Clone
-To create a new clone job send a `type: job` message
+To create a new clone job send a `type: clone` message
 ```yaml
 # client -> core
 type: clone
