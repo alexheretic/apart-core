@@ -22,7 +22,7 @@ source: /dev/abc12
 destination: {destination}
 name: do_clone_job", destination = core.tmp_dir());
   core.send(&clone_msg);
-  let expected_filename = format!("do_clone_job-{}.apt.gz", Local::now().format("%Y-%m-%dT%H%M"));
+  let expected_filename = format!("do_clone_job-{}.apt.dd.gz", Local::now().format("%Y-%m-%dT%H%M"));
 
   let ref msg = core.expect_message_with(|msg| msg["type"].as_str() == Some("clone"));
   let id = msg["id"].as_str();

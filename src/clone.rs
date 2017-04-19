@@ -43,16 +43,18 @@ fn check_exists(command: &str) -> Result<()> {
   Ok(())
 }
 
-fn partclone_cmd_for_source(source: &str) -> Result<String> {
+fn partclone_cmd(variant: &str) -> Result<String> {
   let partclone_cmd = env::var("PARTCLONE_CMD").unwrap_or("partclone".to_owned());
-  let partclone_dd = format!("{}.{}", partclone_cmd, "dd");
+  let partclone_dd = format!("{}.{}", partclone_cmd, variant);
   check_exists(&partclone_dd)?;
   Ok(partclone_dd.to_string())
 }
 
-fn destination_raw_fd(dir: &str, name: &str) -> Result<(String, RawFd)> {
+fn destination_raw_fd(dir: &str, name: &str, partclone_variant: &str) -> Result<(String, RawFd)> {
   // something like: "/mnt/backups/mypart-2017-01-25T1245.apt.gz.inprogress"
-  let file = format!("{}/{}-{}.apt.gz.inprogress", dir, name, Local::now().format("%Y-%m-%dT%H%M"));
+  let file = format!("{directory}/{name}-{timestamp}.apt.{partclone_variant}.gz.inprogress",
+    directory = dir, name = name, timestamp = Local::now().format("%Y-%m-%dT%H%M"),
+    partclone_variant = partclone_variant);
   let path = Path::new(&file);
   if path.exists() {
     return Err(Error::new(ErrorKind::AlreadyExists, format!("{} already exists", file)));
@@ -110,9 +112,10 @@ fn read_partclone_output(stderr: ChildStderr, tx: Sender<JobStatus>, info: JobSt
 
 impl CloneJob {
   pub fn new(source: String, destination: String, name: String) -> Result<CloneJob> {
-    let (dest_file, dest_raw_fd) = destination_raw_fd(&destination, &name)?;
+    let partclone_variant = "dd"; // TODO detect best variant to use
+    let (dest_file, dest_raw_fd) = destination_raw_fd(&destination, &name, partclone_variant)?;
 
-    let mut partclone_cmd = Command::new(partclone_cmd_for_source(&source)?)
+    let mut partclone_cmd = Command::new(partclone_cmd(partclone_variant)?)
       .arg("-s").arg(&source)
       .stdout(Stdio::piped())
       .stdin(Stdio::null())
