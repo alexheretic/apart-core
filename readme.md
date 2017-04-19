@@ -47,7 +47,21 @@ start: 2017-04-18T17:39:01Z  # zoned time of start
 
 # [optional fields]
 finish: 2017-04-18T17:39:02Z # zoned time of finish, only present when complete = 1
-error: somthing went wrong # description of clone failure, implies the clone has failed
+```
+To cancel a clone send:
+```yaml
+# client -> core
+type: cancel-clone
+id: uid123
+```
+In the case theres an error completing the clone, ie it's just been cancelled, an error message is sent
+```yaml
+# core -> client
+type: clone-failed
+source: /dev/sda1
+destination: /mnt/backups/work.apt.gz
+id: uid123
+error: Cancelled # a reason for the failure
 ```
 
 ### Status

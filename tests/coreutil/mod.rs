@@ -7,7 +7,7 @@ extern crate wait_timeout;
 use yaml_rust::{YamlLoader,Yaml};
 use std::process::{Command, Child};
 use std::io::{ErrorKind, Error, Result};
-use std::time::{Duration};
+use std::time::{Duration, Instant};
 use wait_timeout::ChildExt;
 use std::fs;
 use std::path::{PathBuf, Path};
@@ -144,12 +144,16 @@ impl CoreHandle {
     expect_message_from(&self.socket)
   }
 
+
   pub fn expect_message_with<P>(&self, predicate: P) -> Yaml where P: Fn(&Yaml) -> bool {
+    let start = Instant::now();
     loop {
       let msg = self.expect_message();
       if predicate(&msg) {
         return msg;
       }
+      assert!(Instant::now().duration_since(start) < Duration::from_secs(1),
+        "expected message not received within 1 second");
     }
   }
 

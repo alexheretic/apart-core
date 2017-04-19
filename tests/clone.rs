@@ -8,6 +8,8 @@ mod coreutil;
 
 use chrono::prelude::*;
 use coreutil::*;
+use std::path::Path;
+use std::time::{Duration, Instant};
 
 // Tests asserting from a client's perspective performing a partition clone
 
@@ -56,4 +58,44 @@ name: do_clone_job", destination = core.tmp_dir());
 
   let output = core.get_tmp_file_contents_bytes(&expected_filename).expect("!read $tmp_dir/do_clone_job.apt.gz");
   assert_eq!(decompress(&output).expect("!decompress"), "mock-partition-/dev/abc12-data");
+}
+
+#[test]
+fn cancel_clone_job() {
+  let core = CoreHandle::new().unwrap();
+
+  let clone_msg = format!("type: clone
+source: /dev/abc12
+destination: {destination}
+name: cancel_clone_job", destination = core.tmp_dir());
+  core.send(&clone_msg);
+
+  let ref msg = core.expect_message_with(|msg| msg["type"].as_str() == Some("clone"));
+  let id = msg["id"].as_str();
+  let destination = msg["destination"].as_str().unwrap();
+
+  core.set_mock_partclone(MockPartcloneState{ complete: 0.7865, rate: "9.00GB/min".to_owned() })
+    .expect("!set_mock_partclone");
+
+  let ref msg = core.expect_message_with(|msg| msg["rate"].as_str() == Some("9.00GB/min"));
+  assert_eq!(msg["id"].as_str(), id);
+
+  let inprogress_path = format!("{}.inprogress", destination);
+  assert!(Path::new(&inprogress_path).exists());
+
+  let cancel_msg = format!("type: cancel-clone\nid: {id}", id = id.unwrap());
+  core.send(&cancel_msg);
+
+  let ref msg = core.expect_message_with(|msg| msg["error"].as_str().is_some());
+  assert_eq!(msg["id"].as_str(), id);
+  assert_eq!(msg["error"].as_str(), Some("Cancelled"));
+
+  assert!(!Path::new(&destination).exists());
+
+  let start = Instant::now();
+  loop {
+    assert!(Instant::now().duration_since(start) < Duration::from_secs(1),
+      "*.inprogress file not deleted");
+    if !Path::new(&inprogress_path).exists() { break; }
+  }
 }

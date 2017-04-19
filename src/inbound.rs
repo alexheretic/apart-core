@@ -5,7 +5,8 @@ use self::Request::*;
 pub enum Request {
   StatusRequest,
   KillRequest,
-  CloneRequest { source: String, destination: String, name: String }
+  CloneRequest { source: String, destination: String, name: String },
+  CancelCloneRequest { id: String }
 }
 
 impl Request {
@@ -25,6 +26,10 @@ impl Request {
             }),
             _ => None
           }
+        },
+        Some("cancel-clone") => match docs[0]["id"].as_str() {
+          Some(id) => Some(CancelCloneRequest{ id: id.to_owned() }),
+          _ => None
         },
         _ => None
       },

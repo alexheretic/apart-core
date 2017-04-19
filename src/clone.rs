@@ -11,10 +11,19 @@ use std::os::unix::io::{FromRawFd, IntoRawFd, RawFd};
 use std::fs::File;
 use regex::Regex;
 
+#[derive(Clone, PartialEq, Debug)]
+pub struct JobStatusCommon {
+  pub id: String,
+  pub source: String,
+  pub destination: String,
+  pub start: DateTime<UTC>
+}
+
 #[derive(PartialEq, Debug)]
 pub enum JobStatus {
-  Running { source: String, destination: String, complete: f64, rate: String, start: DateTime<UTC> },
-  Finished { source: String, destination: String, rate: String, start: DateTime<UTC>, finish: DateTime<UTC> }
+  Running { common: JobStatusCommon, complete: f64, rate: String},
+  Finished { common: JobStatusCommon, rate: String, finish: DateTime<UTC> },
+  Failed { common: JobStatusCommon, reason: String }
 }
 
 #[derive(Debug)]
@@ -22,6 +31,7 @@ pub struct CloneJob {
   source: String,
   destination: String,
   partclone_cmd: Child,
+  start: DateTime<UTC>,
   pub rx: Receiver<JobStatus>
 }
 
@@ -50,9 +60,8 @@ fn destination_raw_fd(dir: &str, name: &str) -> Result<(String, RawFd)> {
   Ok((file.to_owned(), File::create(path)?.into_raw_fd()))
 }
 
-fn read_partclone_output(stderr: ChildStderr, tx: Sender<JobStatus>, source: String, destination: String) {
+fn read_partclone_output(stderr: ChildStderr, tx: Sender<JobStatus>, info: JobStatusCommon) {
   let progress_re = Regex::new(r"Completed:\s*(\d{1,3}\.?\d?\d?)%,\s*([^,]+)").unwrap();
-  let start = UTC::now();
   let (mut started_main_output, mut synced) = (false, false);
   let mut last_rate = None;
 
@@ -70,11 +79,9 @@ fn read_partclone_output(stderr: ChildStderr, tx: Sender<JobStatus>, source: Str
               let rate = cap[2].to_owned();
               last_rate = Some(rate.clone());
               if let Err(_) = tx.send(JobStatus::Running {
-                  source: source.to_owned(),
-                  destination: destination.to_owned(),
-                  complete: complete,
+                  common: info.clone(),
                   rate: rate,
-                  start: start }) {
+                  complete: complete }) {
                 warn!("tx.send failed, finishing");
                 break;
               }
@@ -93,10 +100,8 @@ fn read_partclone_output(stderr: ChildStderr, tx: Sender<JobStatus>, source: Str
   }
   if synced {
     if let Err(_) = tx.send(JobStatus::Finished {
-        source: source.to_owned(),
-        destination: destination.to_owned(),
+        common: info,
         rate: last_rate.unwrap_or("?".to_owned()),
-        start: start,
         finish: UTC::now() }) {
       warn!("tx.send failed (final), finishing");
     }
@@ -119,9 +124,6 @@ impl CloneJob {
       .stdout(unsafe { Stdio::from_raw_fd(dest_raw_fd) })
       .spawn()?;
 
-
-
-
     let stderr = partclone_cmd.stderr.take().unwrap();
     let thread_name = format!("partclone-stderr-reader {}->{}", source, dest_file);
     let (tx, rx) = mpsc::channel();
@@ -129,14 +131,20 @@ impl CloneJob {
       source: source,
       destination: dest_file,
       partclone_cmd: partclone_cmd,
-      rx: rx
+      rx: rx,
+      start: UTC::now()
     };
-    let (source, destination) = (job.source.to_owned(), job.successful_destination().to_owned());
+    let info = JobStatusCommon {
+      source: job.source.to_owned(),
+      destination: job.successful_destination().to_owned(),
+      id: job.id(),
+      start: job.start
+    };
 
     thread::Builder::new()
       .name(thread_name)
       .spawn(move|| {
-        read_partclone_output(stderr, tx, source, destination)
+        read_partclone_output(stderr, tx, info)
       })?;
 
     Ok(job)
@@ -156,6 +164,18 @@ impl CloneJob {
     let (without_inprogress, _) = self.destination.split_at(self.destination.len() - ".inprogress".len());
     without_inprogress
   }
+
+  pub fn fail_status(&self, reason: &str) -> JobStatus {
+    JobStatus::Failed {
+      common: JobStatusCommon {
+        source: self.source.to_owned(),
+        destination: self.successful_destination().to_owned(),
+        id: self.id(),
+        start: self.start
+      },
+      reason: reason.to_owned()
+    }
+  }
 }
 
 impl Drop for CloneJob {
@@ -164,8 +184,8 @@ impl Drop for CloneJob {
       Ok(None) => {
         if let Err(x) = self.partclone_cmd.kill() {
           error!("Failed to kill CloneJob#cmd: {}", x);
-          self.rm_inprogress_file();
         }
+        self.rm_inprogress_file();
       },
       Ok(Some(status)) => {
         if status.success() {

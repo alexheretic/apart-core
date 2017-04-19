@@ -67,6 +67,9 @@ impl Server {
                 },
                 Err(err) => error!("Clonejob creation failed: {}", err)
               }
+            },
+            Some(CancelCloneRequest { ref id }) => if let Some(job) = self.jobs.remove(id) {
+              self.zmq_send(&job.fail_status("Cancelled").to_yaml())?;
             }
           };
           true
@@ -83,7 +86,7 @@ impl Server {
       for (id, job) in &self.jobs {
         match job.rx.try_recv() {
           Ok(status) => {
-            self.zmq_send(&status.to_yaml(id))?;
+            self.zmq_send(&status.to_yaml())?;
             if let JobStatus::Finished {..} = status {
               finished_job_ids.push(id.to_owned());
             }
