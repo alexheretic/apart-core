@@ -16,9 +16,9 @@ Linux util for partition cloning GUIs. ZMQ API for managing partclone jobs. Prov
    + + +
    | | | subprocess
    v v v
-+-----------------+
-| partclone, pigz |
-+-----------------+
++------------------------+
+| partclone, pigz, lsblk |
++------------------------+
 ```
 
 ## Starting
