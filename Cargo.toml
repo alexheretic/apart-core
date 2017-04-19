@@ -1,0 +1,18 @@
+[package]
+name = "apart-core"
+version = "0.1.0"
+authors = ["Alex Butler <alexheretic@gmail.com>"]
+
+[dependencies]
+zmq = { git = "https://github.com/alexheretic/rust-zmq", branch = "release/v0.8" }
+yaml-rust = "0"
+log = "0"
+wait-timeout = "0"
+env_logger = "0"
+regex = "0"
+chrono = "0"
+json = "0"
+
+[dev-dependencies]
+uuid = { version = "0", features = ["v4"] }
+flate2 = "0"
