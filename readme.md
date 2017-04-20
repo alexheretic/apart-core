@@ -91,6 +91,13 @@ type: status
 status: dying
 ```
 
+### Shutdown
+To shutdown the core simply send:
+```yaml
+type: kill-request
+```
+Core will cancel all jobs and shutdown
+
 ## Dependencies
 * zeromq
 * partclone
