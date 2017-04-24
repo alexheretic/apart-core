@@ -67,6 +67,15 @@ fn read_partclone_output(stderr: ChildStderr, tx: Sender<JobStatus>, info: JobSt
   let (mut started_main_output, mut synced) = (false, false);
   let mut last_rate = None;
 
+  // send initial status update
+  if let Err(_) = tx.send(JobStatus::Running {
+      common: info.clone(),
+      rate: "Initializing".to_owned(),
+      complete: 0. }) {
+    warn!("tx.send failed, finishing");
+    return;
+  }
+
   for line in BufReader::new(stderr).lines() {
     match line {
       Ok(out) => {

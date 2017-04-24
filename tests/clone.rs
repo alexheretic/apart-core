@@ -30,7 +30,7 @@ name: do_clone_job", destination = core.tmp_dir());
   assert!(id.is_some(), "missing clone.id");
   assert!(start.is_some(), "missing clone.start");
   assert_eq!(msg["complete"].as_f64(), Some(0.0));
-  assert_eq!(msg["rate"].as_str(), Some("9.99GB/min"));
+  assert_eq!(msg["rate"].as_str(), Some("Initializing"));
   assert_eq!(msg["finish"].as_str(), None);
   assert_eq!(msg["source"].as_str(), Some("/dev/abc12"));
   assert_eq!(msg["destination"].as_str(), Some(format!("{}/{}", core.tmp_dir(), expected_filename).as_ref()));
