@@ -31,6 +31,7 @@ fi
 touch "$DIR/.control.$ME";
 complete="0.00"
 rate="9.99GB/min"
+remaining="00:03:02"
 
 function echo_output_head {
   echo "Partclone v0.2.89-mock http://partclone.org" >&2
@@ -43,7 +44,7 @@ function echo_output_head {
   echo "Block size:   512 Byte" >&2
 }
 function echo_output_tail {
-  echo "Elapsed: 00:00:12, Remaining: 00:03:02, Completed:   $complete%,   $rate," >&2
+  echo "Elapsed: 00:00:12, Remaining: $remaining, Completed:   $complete%,   $rate," >&2
   echo "current block:    3878912, total block:   62914560, Complete:   $complete" >&2
 }
 function echo_final {

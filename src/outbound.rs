@@ -21,15 +21,17 @@ start: {start:?}", id = id, start = start, source = source, destination = destin
 impl ToYaml for JobStatus {
   fn to_yaml(&self) -> String {
     match self {
-      &JobStatus::Running { ref complete, ref rate, ref common } => {
+      &JobStatus::Running { ref complete, ref rate, ref common, ref estimated_finish } => {
         let complete_yaml_float = match complete.to_string() {
           ref s if s.len() == 1 => s.to_owned() + ".0",
           s => s
         };
-        format!("type: clone
-{common_yaml}
-complete: {complete}
-rate: \"{rate}\"", common_yaml = common.to_yaml(), complete = complete_yaml_float, rate = rate)
+        let estimated_finish = estimated_finish.clone()
+          .map_or_else(|| "~".to_owned(), |d| format!("{:?}", d));
+        let rate = rate.clone().unwrap_or_else(|| "~".to_owned());
+        format!("type: clone\n{common_yaml}\ncomplete: {complete}\nrate: {rate}\nestimatedFinish: {finish}",
+          common_yaml = common.to_yaml(), complete = complete_yaml_float, rate = rate,
+          finish = estimated_finish)
       },
 
       &JobStatus::Finished { ref finish, ref rate, ref common } => {
@@ -149,8 +151,9 @@ mod tests {
         start: UTC.ymd(2017, 4, 18).and_hms(15, 44, 12),
         id: "some-id".to_owned()
       },
+      estimated_finish: Some(UTC.ymd(2017, 4, 18).and_hms(15, 45, 00)),
       complete: 0.123,
-      rate: "1GB/s".to_owned() }.to_yaml();
+      rate: Some("1GB/s".to_owned()) }.to_yaml();
     let yaml = YamlLoader::load_from_str(&yaml_str).unwrap().remove(0);
     assert_eq!(yaml["type"].as_str(), Some("clone"));
     assert_eq!(yaml["complete"].as_f64(), Some(0.123));
@@ -159,6 +162,23 @@ mod tests {
     assert_eq!(yaml["start"].as_str(), Some("2017-04-18T15:44:12Z"));
     assert_eq!(yaml["source"].as_str(), Some("/dev/ars2"));
     assert_eq!(yaml["destination"].as_str(), Some("/mnt/backups/ars2.gz"));
+  }
+
+  #[test]
+  fn job_running_none_options() {
+    let yaml_str = JobStatus::Running {
+      common: JobStatusCommon {
+        source: "/dev/ars2".to_owned(),
+        destination: "/mnt/backups/ars2.gz".to_owned(),
+        start: UTC.ymd(2017, 4, 18).and_hms(15, 44, 12),
+        id: "some-id".to_owned()
+      },
+      estimated_finish: None,
+      complete: 0.123,
+      rate: None }.to_yaml();
+    let yaml = YamlLoader::load_from_str(&yaml_str).unwrap().remove(0);
+    assert_eq!(yaml["rate"].as_str(), None);
+    assert_eq!(yaml["estimatedFinish"].as_str(), None);
   }
 
   #[test]
@@ -192,8 +212,9 @@ mod tests {
         start: UTC.ymd(2017, 4, 18).and_hms(15, 44, 12),
         id: "some-id".to_owned()
       },
+      estimated_finish: Some(UTC.ymd(2017, 4, 18).and_hms(15, 45, 00)),
       complete: 1.0,
-      rate: "2GB/s".to_owned() }.to_yaml();
+      rate: Some("2GB/s".to_owned()) }.to_yaml();
     let yaml = YamlLoader::load_from_str(&yaml_str).unwrap().remove(0);
     assert_eq!(yaml["complete"].as_f64(), Some(1.0));
     let yaml_str = JobStatus::Running {
@@ -203,8 +224,9 @@ mod tests {
         start: UTC.ymd(2017, 4, 18).and_hms(15, 44, 12),
         id: "some-id".to_owned()
       },
+      estimated_finish: Some(UTC.ymd(2017, 4, 18).and_hms(15, 45, 00)),
       complete: 0.0,
-      rate: "3GB/s".to_owned() }.to_yaml();
+      rate: Some("3GB/s".to_owned()) }.to_yaml();
     let yaml = YamlLoader::load_from_str(&yaml_str).unwrap().remove(0);
     assert_eq!(yaml["complete"].as_f64(), Some(0.0));
   }

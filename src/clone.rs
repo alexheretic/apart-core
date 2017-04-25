@@ -4,6 +4,7 @@ use std::path::Path;
 use std::process::{Command, Child, Stdio, ChildStderr};
 use wait_timeout::ChildExt;
 use std::time::Duration;
+use chrono::Duration as OldDuration;
 use std::io::{ErrorKind, Error, BufReader, Result, BufRead};
 use std::sync::mpsc;
 use std::sync::mpsc::{Receiver, Sender};
@@ -21,7 +22,12 @@ pub struct JobStatusCommon {
 
 #[derive(PartialEq, Debug)]
 pub enum JobStatus {
-  Running { common: JobStatusCommon, complete: f64, rate: String},
+  Running {
+    common: JobStatusCommon,
+    complete: f64,
+    rate: Option<String>,
+    estimated_finish: Option<DateTime<UTC>>
+  },
   Finished { common: JobStatusCommon, rate: String, finish: DateTime<UTC> },
   Failed { common: JobStatusCommon, reason: String }
 }
@@ -63,18 +69,23 @@ fn destination_raw_fd(dir: &str, name: &str, partclone_variant: &str) -> Result<
 }
 
 fn read_partclone_output(stderr: ChildStderr, tx: Sender<JobStatus>, info: JobStatusCommon) {
-  let progress_re = Regex::new(r"Completed:\s*(\d{1,3}\.?\d?\d?)%,\s*([^,]+)").unwrap();
+  let progress_re = Regex::new(
+    r"Remaining:\s*(\d{2,}:\d{2}:\d{2}), Completed:\s*(\d{1,3}\.?\d?\d?)%,\s*([^,]+)").unwrap();
+
   let (mut started_main_output, mut synced) = (false, false);
   let mut last_rate = None;
 
   // send initial status update
   if let Err(_) = tx.send(JobStatus::Running {
       common: info.clone(),
-      rate: "Initializing".to_owned(),
-      complete: 0. }) {
+      rate: None,
+      estimated_finish: None,
+      complete: 0.0 }) {
     warn!("tx.send failed, finishing");
     return;
   }
+
+  let duration_re = Regex::new(r"^(\d{2,}):(\d{2}):(\d{2})$").unwrap();
 
   for line in BufReader::new(stderr).lines() {
     match line {
@@ -82,16 +93,28 @@ fn read_partclone_output(stderr: ChildStderr, tx: Sender<JobStatus>, info: JobSt
         if started_main_output {
           if !synced {
             for cap in progress_re.captures_iter(&out) {
-              let mut complete = cap[1].parse::<f64>().expect("!parse complete") / 100.0;
+              let mut estimated_finish = None;
+              for cap in duration_re.captures_iter(&cap[1]) {
+                if let (Ok(hours), Ok(minutes), Ok(seconds)) =
+                    (cap[1].parse::<i64>(), cap[2].parse::<i64>(), cap[3].parse::<i64>()) {
+                  let remaining = OldDuration::hours(hours) +
+                    OldDuration::minutes(minutes) + OldDuration::seconds(seconds);
+                  estimated_finish = Some(UTC::now() + remaining);
+                }
+              }
+
+              let mut complete = cap[2].parse::<f64>().expect("!parse complete") / 100.0;
               if complete == 1.0 {
                 // only return 100% when synced
                 complete = 0.9999;
               }
-              let rate = cap[2].to_owned();
+
+              let rate = cap[3].to_owned();
               last_rate = Some(rate.clone());
               if let Err(_) = tx.send(JobStatus::Running {
                   common: info.clone(),
-                  rate: rate,
+                  estimated_finish: estimated_finish,
+                  rate: Some(rate),
                   complete: complete }) {
                 warn!("tx.send failed, finishing");
                 break;

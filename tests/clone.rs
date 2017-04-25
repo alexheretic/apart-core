@@ -7,6 +7,7 @@ extern crate chrono;
 mod coreutil;
 
 use chrono::prelude::*;
+use chrono::Duration as OldDuration;
 use coreutil::*;
 use std::path::Path;
 use std::time::{Duration, Instant};
@@ -16,6 +17,8 @@ use std::time::{Duration, Instant};
 #[test]
 fn do_clone_job() {
   let core = CoreHandle::new().unwrap();
+  /// default estimated remaining duration in mock partclone
+  let mock_duration = OldDuration::minutes(3) + OldDuration::seconds(2);
 
   let clone_msg = format!("type: clone
 source: /dev/abc12
@@ -30,7 +33,6 @@ name: do_clone_job", destination = core.tmp_dir());
   assert!(id.is_some(), "missing clone.id");
   assert!(start.is_some(), "missing clone.start");
   assert_eq!(msg["complete"].as_f64(), Some(0.0));
-  assert_eq!(msg["rate"].as_str(), Some("Initializing"));
   assert_eq!(msg["finish"].as_str(), None);
   assert_eq!(msg["source"].as_str(), Some("/dev/abc12"));
   assert_eq!(msg["destination"].as_str(), Some(format!("{}/{}", core.tmp_dir(), expected_filename).as_ref()));
@@ -41,8 +43,18 @@ name: do_clone_job", destination = core.tmp_dir());
   core.set_mock_partclone(MockPartcloneState{ complete: 0.5634, rate: "0.01GB/min".to_owned() })
     .expect("!set_mock_partclone");
   let ref msg = core.expect_message_with(|msg| msg["complete"].as_f64() == Some(0.5634));
+  let expected_estimated_finished_time = UTC::now() + mock_duration;
+
   assert_eq!(msg["id"].as_str(), id);
   assert_eq!(msg["rate"].as_str(), Some("0.01GB/min"));
+
+  let estimated_finish = msg["estimatedFinish"].as_str().expect("missing estimatedFinish");
+  let estimated_finish_time: DateTime<UTC> = estimated_finish.parse().expect("!parse expectedFinish");
+
+  let finish_time_diff = estimated_finish_time.signed_duration_since(expected_estimated_finished_time);
+  if finish_time_diff > OldDuration::seconds(1) {
+    assert_eq!(estimated_finish_time, expected_estimated_finished_time, "expected within a second");
+  }
   assert_eq!(msg["start"].as_str(), start);
   assert_eq!(msg["finish"].as_str(), None);
 
