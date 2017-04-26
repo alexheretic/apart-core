@@ -84,7 +84,7 @@ impl TmpDir {
     TmpDir { dir: fs::canonicalize(tmp_dir).unwrap().into_os_string().into_string().unwrap() }
   }
 
-  fn path_of(&self, filename: &str) -> Result<PathBuf> {
+  fn existing_path_of(&self, filename: &str) -> Result<PathBuf> {
     let file = self.dir.to_owned() + "/" + filename;
     let mut control_path = PathBuf::new();
     control_path.push(&file);
@@ -164,20 +164,20 @@ impl CoreHandle {
   pub fn set_mock_partclone(&self, MockPartcloneState { complete, rate }: MockPartcloneState) -> Result<()> {
     let mut file = fs::OpenOptions::new()
       .write(true)
-      .open(self.tmp_dir.path_of(".control.mockpcl.dd")?)?;
+      .open(self.tmp_dir.existing_path_of(".control.mockpcl.dd")?)?;
     write!(file, "complete={:.2}\nrate={}", complete * 100., rate)?;
     Ok(())
   }
 
   pub fn get_tmp_file_contents_bytes(&self, filename: &str) -> Result<Vec<u8>> {
     let mut contents = Vec::new();
-    fs::File::open(self.tmp_dir.path_of(filename)?)?.read_to_end(&mut contents)?;
+    fs::File::open(self.tmp_dir.existing_path_of(filename)?)?.read_to_end(&mut contents)?;
     Ok(contents)
   }
 
   pub fn get_tmp_file_contents_utf8(&self, filename: &str) -> Result<String> {
     let mut contents = String::new();
-    fs::File::open(self.tmp_dir.path_of(filename)?)?.read_to_string(&mut contents)?;
+    fs::File::open(self.tmp_dir.existing_path_of(filename)?)?.read_to_string(&mut contents)?;
     Ok(contents)
   }
 

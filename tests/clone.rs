@@ -27,7 +27,8 @@ name: do_clone_job", destination = core.tmp_dir());
   core.send(&clone_msg);
   let expected_filename = format!("do_clone_job-{}.apt.dd.gz", Local::now().format("%Y-%m-%dT%H%M"));
 
-  let ref msg = core.expect_message_with(|msg| msg["type"].as_str() == Some("clone"));
+  let ref msg = core.expect_message_with(|msg|
+    msg["type"].as_str() == Some("clone") && msg["rate"].as_str().is_some());
   let id = msg["id"].as_str();
   let start = msg["start"].as_str();
   assert!(id.is_some(), "missing clone.id");
@@ -52,7 +53,7 @@ name: do_clone_job", destination = core.tmp_dir());
   let estimated_finish_time: DateTime<UTC> = estimated_finish.parse().expect("!parse expectedFinish");
 
   let finish_time_diff = estimated_finish_time.signed_duration_since(expected_estimated_finished_time);
-  if finish_time_diff > OldDuration::seconds(1) {
+  if abs(finish_time_diff) > OldDuration::seconds(1) {
     assert_eq!(estimated_finish_time, expected_estimated_finished_time, "expected within a second");
   }
   assert_eq!(msg["start"].as_str(), start);
@@ -72,6 +73,13 @@ name: do_clone_job", destination = core.tmp_dir());
   assert_eq!(decompress(&output).expect("!decompress"), "mock-partition-/dev/abc12-data");
 }
 
+fn abs(duration: OldDuration) -> OldDuration {
+  if duration < OldDuration::zero() {
+    return duration * -1
+  }
+  duration
+}
+
 #[test]
 fn cancel_clone_job() {
   let core = CoreHandle::new().unwrap();
@@ -82,7 +90,8 @@ destination: {destination}
 name: cancel_clone_job", destination = core.tmp_dir());
   core.send(&clone_msg);
 
-  let ref msg = core.expect_message_with(|msg| msg["type"].as_str() == Some("clone"));
+  let ref msg = core.expect_message_with(|msg|
+    msg["type"].as_str() == Some("clone") && msg["rate"].as_str().is_some());
   let id = msg["id"].as_str();
   let destination = msg["destination"].as_str().unwrap();
 
