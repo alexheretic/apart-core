@@ -11,6 +11,7 @@ use std::sync::mpsc::{Receiver, Sender};
 use std::os::unix::io::{FromRawFd, IntoRawFd, RawFd};
 use std::fs::File;
 use regex::Regex;
+use uuid::Uuid;
 
 #[derive(Clone, PartialEq, Debug)]
 pub struct JobStatusCommon {
@@ -29,13 +30,14 @@ pub enum JobStatus {
     estimated_finish: Option<DateTime<UTC>>
   },
   Finished { common: JobStatusCommon, rate: String, finish: DateTime<UTC> },
-  Failed { common: JobStatusCommon, reason: String }
+  Failed { common: JobStatusCommon, reason: String, finish: DateTime<UTC> }
 }
 
 #[derive(Debug)]
 pub struct CloneJob {
   source: String,
   destination: String,
+  id: Uuid,
   partclone_cmd: Child,
   start: DateTime<UTC>,
   pub rx: Receiver<JobStatus>
@@ -167,7 +169,8 @@ impl CloneJob {
       destination: dest_file,
       partclone_cmd: partclone_cmd,
       rx: rx,
-      start: UTC::now()
+      start: UTC::now(),
+      id: Uuid::new_v4()
     };
     let info = JobStatusCommon {
       source: job.source.to_owned(),
@@ -186,7 +189,7 @@ impl CloneJob {
   }
 
   pub fn id(&self) -> String {
-    format!("{}->{}", self.source, self.successful_destination())
+    format!("{}", self.id)
   }
 
   fn rm_inprogress_file(&self) {
@@ -208,7 +211,8 @@ impl CloneJob {
         id: self.id(),
         start: self.start
       },
-      reason: reason.to_owned()
+      reason: reason.to_owned(),
+      finish: UTC::now()
     }
   }
 }

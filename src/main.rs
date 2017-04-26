@@ -7,6 +7,7 @@ extern crate wait_timeout;
 extern crate env_logger;
 extern crate regex;
 extern crate chrono;
+extern crate uuid;
 mod server;
 mod inbound;
 mod outbound;

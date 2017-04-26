@@ -42,10 +42,11 @@ rate: \"{rate}\"
 finish: {finish:?}", common_yaml = common.to_yaml(), complete = "1.0", rate = rate, finish = finish)
       },
 
-      &JobStatus::Failed { ref common, ref reason } => {
+      &JobStatus::Failed { ref finish, ref common, ref reason } => {
         format!("type: clone-failed
 {common_yaml}
-error: {error}", common_yaml = common.to_yaml(), error = reason)
+finish: {finish:?}
+error: {error}", common_yaml = common.to_yaml(), finish = finish, error = reason)
       }
     }
   }
@@ -197,6 +198,26 @@ mod tests {
     assert_eq!(yaml["complete"].as_f64(), Some(1.0));
     assert_eq!(yaml["id"].as_str(), Some("some-id"));
     assert_eq!(yaml["rate"].as_str(), Some("1GB/s"));
+    assert_eq!(yaml["start"].as_str(), Some("2017-04-18T15:44:12Z"));
+    assert_eq!(yaml["finish"].as_str(), Some("2017-04-18T15:45:34Z"));
+    assert_eq!(yaml["source"].as_str(), Some("/dev/ars3"));
+    assert_eq!(yaml["destination"].as_str(), Some("/mnt/backups/ars3.gz"));
+  }
+
+  #[test]
+  fn job_failed_to_yaml() {
+    let yaml_str = JobStatus::Failed {
+      common: JobStatusCommon {
+        source: "/dev/ars3".to_owned(),
+        destination: "/mnt/backups/ars3.gz".to_owned(),
+        start: UTC.ymd(2017, 4, 18).and_hms(15, 44, 12),
+        id: "some-id".to_owned()
+      },
+      finish: UTC.ymd(2017, 4, 18).and_hms(15, 45, 34),
+      reason: "something went wrong".to_owned() }.to_yaml();
+    let yaml = YamlLoader::load_from_str(&yaml_str).unwrap().remove(0);
+    assert_eq!(yaml["type"].as_str(), Some("clone-failed"));
+    assert_eq!(yaml["id"].as_str(), Some("some-id"));
     assert_eq!(yaml["start"].as_str(), Some("2017-04-18T15:44:12Z"));
     assert_eq!(yaml["finish"].as_str(), Some("2017-04-18T15:45:34Z"));
     assert_eq!(yaml["source"].as_str(), Some("/dev/ars3"));

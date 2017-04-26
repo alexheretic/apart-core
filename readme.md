@@ -61,6 +61,8 @@ type: clone-failed
 source: /dev/sda1
 destination: /mnt/backups/work.apt.gz
 id: uid123
+start: 2017-04-18T17:39:01Z
+finish: 2017-04-18T17:39:03Z # zoned time of failure
 error: Cancelled # a reason for the failure
 ```
 
