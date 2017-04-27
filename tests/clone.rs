@@ -49,8 +49,8 @@ name: do_clone_job", destination = core.tmp_dir());
   assert_eq!(msg["id"].as_str(), id);
   assert_eq!(msg["rate"].as_str(), Some("0.01GB/min"));
 
-  let estimated_finish = msg["estimatedFinish"].as_str().expect("missing estimatedFinish");
-  let estimated_finish_time: DateTime<UTC> = estimated_finish.parse().expect("!parse expectedFinish");
+  let estimated_finish = msg["estimated_finish"].as_str().expect("missing estimated_finish");
+  let estimated_finish_time: DateTime<UTC> = estimated_finish.parse().expect("!parse estimated_finish");
 
   let finish_time_diff = estimated_finish_time.signed_duration_since(expected_estimated_finished_time);
   if abs(finish_time_diff) > OldDuration::seconds(1) {
@@ -68,6 +68,7 @@ name: do_clone_job", destination = core.tmp_dir());
   assert_eq!(msg["rate"].as_str(), Some("12.23GB/min"));
   assert_eq!(msg["start"].as_str(), start);
   assert!(msg["finish"].as_str().is_some(), "missing clone.finish");
+  assert!(msg["image_size"].as_i64().is_some(), "missing clone.image_size");
 
   let output = core.get_tmp_file_contents_bytes(&expected_filename).expect("!read $tmp_dir/do_clone_job.apt.gz");
   assert_eq!(decompress(&output).expect("!decompress"), "mock-partition-/dev/abc12-data");

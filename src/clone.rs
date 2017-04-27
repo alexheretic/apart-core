@@ -18,6 +18,7 @@ pub struct JobStatusCommon {
   pub id: String,
   pub source: String,
   pub destination: String,
+  pub inprogress_destination: String,
   pub start: DateTime<UTC>
 }
 
@@ -29,7 +30,7 @@ pub enum JobStatus {
     rate: Option<String>,
     estimated_finish: Option<DateTime<UTC>>
   },
-  Finished { common: JobStatusCommon, rate: String, finish: DateTime<UTC> },
+  Finished { common: JobStatusCommon, rate: String, finish: DateTime<UTC>, image_size: u64 },
   Failed { common: JobStatusCommon, reason: String, finish: DateTime<UTC> }
 }
 
@@ -135,12 +136,17 @@ fn read_partclone_output(stderr: ChildStderr, tx: Sender<JobStatus>, info: JobSt
     }
   }
   if synced {
-    if let Err(_) = tx.send(JobStatus::Finished {
-        common: info,
-        rate: last_rate.unwrap_or("?".to_owned()),
-        finish: UTC::now() }) {
-      warn!("tx.send failed (final), finishing");
+    match fs::metadata(&info.inprogress_destination) {
+      Ok(meta) => if let Err(_) = tx.send(JobStatus::Finished {
+          common: info,
+          rate: last_rate.unwrap_or("?".to_owned()),
+          image_size: meta.len(),
+          finish: UTC::now() }) {
+        warn!("tx.send failed (final), finishing");
+      },
+      Err(err) => warn!("Could not read destination metadata: {}", err)
     }
+
   }
 }
 
@@ -175,6 +181,7 @@ impl CloneJob {
     let info = JobStatusCommon {
       source: job.source.to_owned(),
       destination: job.successful_destination().to_owned(),
+      inprogress_destination: job.destination.to_owned(),
       id: job.id(),
       start: job.start
     };
@@ -208,6 +215,7 @@ impl CloneJob {
       common: JobStatusCommon {
         source: self.source.to_owned(),
         destination: self.successful_destination().to_owned(),
+        inprogress_destination: self.destination.to_owned(),
         id: self.id(),
         start: self.start
       },

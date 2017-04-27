@@ -10,11 +10,12 @@ pub trait ToYaml {
 
 impl ToYaml for JobStatusCommon {
   fn to_yaml(&self) -> String {
-    let &JobStatusCommon { ref start, ref source, ref destination, ref id } = self;
+    let &JobStatusCommon { ref start, ref source, ref destination, ref id, .. } = self;
     format!("id: {id}\n\
              source: {source}\n\
              destination: {destination}\n\
-             start: {start:?}", id = id, start = start, source = source, destination = destination)
+             start: {start:?}",
+             id = id, start = start, source = source, destination = destination)
   }
 }
 
@@ -33,24 +34,28 @@ impl ToYaml for JobStatus {
                  {common_yaml}\n\
                  complete: {complete}\n\
                  rate: {rate}\n\
-                 estimatedFinish: {finish}",
-          common_yaml = common.to_yaml(), complete = complete_yaml_float, rate = rate,
-          finish = estimated_finish)
+                 estimated_finish: {finish}",
+                 common_yaml = common.to_yaml(), complete = complete_yaml_float, rate = rate,
+                 finish = estimated_finish)
       },
 
-      &JobStatus::Finished { ref finish, ref rate, ref common } => {
+      &JobStatus::Finished { ref finish, ref rate, ref common, image_size } => {
         format!("type: clone\n\
                  {common_yaml}\n\
                  complete: {complete}\n\
                  rate: \"{rate}\"\n\
-                 finish: {finish:?}", common_yaml = common.to_yaml(), complete = "1.0", rate = rate, finish = finish)
+                 finish: {finish:?}\n\
+                 image_size: {image_size}",
+                 common_yaml = common.to_yaml(), complete = "1.0", rate = rate, finish = finish,
+                 image_size = image_size)
       },
 
       &JobStatus::Failed { ref finish, ref common, ref reason } => {
         format!("type: clone-failed\n\
                  {common_yaml}\n\
                  finish: {finish:?}\n\
-                 error: {error}", common_yaml = common.to_yaml(), finish = finish, error = reason)
+                 error: {error}",
+                 common_yaml = common.to_yaml(), finish = finish, error = reason)
       }
     }
   }
@@ -153,6 +158,7 @@ mod tests {
       common: JobStatusCommon {
         source: "/dev/ars2".to_owned(),
         destination: "/mnt/backups/ars2.gz".to_owned(),
+        inprogress_destination: "/mnt/backups/ars2.gz.inprogress".to_owned(),
         start: UTC.ymd(2017, 4, 18).and_hms(15, 44, 12),
         id: "some-id".to_owned()
       },
@@ -175,6 +181,7 @@ mod tests {
       common: JobStatusCommon {
         source: "/dev/ars2".to_owned(),
         destination: "/mnt/backups/ars2.gz".to_owned(),
+        inprogress_destination: "/mnt/backups/ars2.gz.inprogress".to_owned(),
         start: UTC.ymd(2017, 4, 18).and_hms(15, 44, 12),
         id: "some-id".to_owned()
       },
@@ -183,7 +190,7 @@ mod tests {
       rate: None }.to_yaml();
     let yaml = YamlLoader::load_from_str(&yaml_str).unwrap().remove(0);
     assert_eq!(yaml["rate"].as_str(), None);
-    assert_eq!(yaml["estimatedFinish"].as_str(), None);
+    assert_eq!(yaml["estimated_finish"].as_str(), None);
   }
 
   #[test]
@@ -192,10 +199,12 @@ mod tests {
       common: JobStatusCommon {
         source: "/dev/ars3".to_owned(),
         destination: "/mnt/backups/ars3.gz".to_owned(),
+        inprogress_destination: "/mnt/backups/ars2.gz.inprogress".to_owned(),
         start: UTC.ymd(2017, 4, 18).and_hms(15, 44, 12),
         id: "some-id".to_owned()
       },
       finish: UTC.ymd(2017, 4, 18).and_hms(15, 45, 34),
+      image_size: 123123,
       rate: "1GB/s".to_owned() }.to_yaml();
     let yaml = YamlLoader::load_from_str(&yaml_str).unwrap().remove(0);
     assert_eq!(yaml["type"].as_str(), Some("clone"));
@@ -206,6 +215,7 @@ mod tests {
     assert_eq!(yaml["finish"].as_str(), Some("2017-04-18T15:45:34Z"));
     assert_eq!(yaml["source"].as_str(), Some("/dev/ars3"));
     assert_eq!(yaml["destination"].as_str(), Some("/mnt/backups/ars3.gz"));
+    assert_eq!(yaml["image_size"].as_i64(), Some(123123));
   }
 
   #[test]
@@ -214,6 +224,7 @@ mod tests {
       common: JobStatusCommon {
         source: "/dev/ars3".to_owned(),
         destination: "/mnt/backups/ars3.gz".to_owned(),
+        inprogress_destination: "/mnt/backups/ars2.gz.inprogress".to_owned(),
         start: UTC.ymd(2017, 4, 18).and_hms(15, 44, 12),
         id: "some-id".to_owned()
       },
@@ -234,6 +245,7 @@ mod tests {
       common: JobStatusCommon {
         source: "/dev/ars3".to_owned(),
         destination: "/mnt/backups/ars3.gz".to_owned(),
+        inprogress_destination: "/mnt/backups/ars2.gz.inprogress".to_owned(),
         start: UTC.ymd(2017, 4, 18).and_hms(15, 44, 12),
         id: "some-id".to_owned()
       },
@@ -246,6 +258,7 @@ mod tests {
       common: JobStatusCommon {
         source: "/dev/ars3".to_owned(),
         destination: "/mnt/backups/ars3.gz".to_owned(),
+        inprogress_destination: "/mnt/backups/ars2.gz.inprogress".to_owned(),
         start: UTC.ymd(2017, 4, 18).and_hms(15, 44, 12),
         id: "some-id".to_owned()
       },
