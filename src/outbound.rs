@@ -11,10 +11,10 @@ pub trait ToYaml {
 impl ToYaml for JobStatusCommon {
   fn to_yaml(&self) -> String {
     let &JobStatusCommon { ref start, ref source, ref destination, ref id } = self;
-    format!("id: {id}
-source: {source}
-destination: {destination}
-start: {start:?}", id = id, start = start, source = source, destination = destination)
+    format!("id: {id}\n\
+             source: {source}\n\
+             destination: {destination}\n\
+             start: {start:?}", id = id, start = start, source = source, destination = destination)
   }
 }
 
@@ -29,24 +29,28 @@ impl ToYaml for JobStatus {
         let estimated_finish = estimated_finish.clone()
           .map_or_else(|| "~".to_owned(), |d| format!("{:?}", d));
         let rate = rate.clone().unwrap_or_else(|| "~".to_owned());
-        format!("type: clone\n{common_yaml}\ncomplete: {complete}\nrate: {rate}\nestimatedFinish: {finish}",
+        format!("type: clone\n\
+                 {common_yaml}\n\
+                 complete: {complete}\n\
+                 rate: {rate}\n\
+                 estimatedFinish: {finish}",
           common_yaml = common.to_yaml(), complete = complete_yaml_float, rate = rate,
           finish = estimated_finish)
       },
 
       &JobStatus::Finished { ref finish, ref rate, ref common } => {
-        format!("type: clone
-{common_yaml}
-complete: {complete}
-rate: \"{rate}\"
-finish: {finish:?}", common_yaml = common.to_yaml(), complete = "1.0", rate = rate, finish = finish)
+        format!("type: clone\n\
+                 {common_yaml}\n\
+                 complete: {complete}\n\
+                 rate: \"{rate}\"\n\
+                 finish: {finish:?}", common_yaml = common.to_yaml(), complete = "1.0", rate = rate, finish = finish)
       },
 
       &JobStatus::Failed { ref finish, ref common, ref reason } => {
-        format!("type: clone-failed
-{common_yaml}
-finish: {finish:?}
-error: {error}", common_yaml = common.to_yaml(), finish = finish, error = reason)
+        format!("type: clone-failed\n\
+                 {common_yaml}\n\
+                 finish: {finish:?}\n\
+                 error: {error}", common_yaml = common.to_yaml(), finish = finish, error = reason)
       }
     }
   }
