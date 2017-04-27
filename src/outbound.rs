@@ -12,10 +12,10 @@ impl ToYaml for JobStatusCommon {
   fn to_yaml(&self) -> String {
     let &JobStatusCommon { ref start, ref source, ref destination, ref id, .. } = self;
     format!("id: {id}\n\
-             source: {source}\n\
-             destination: {destination}\n\
-             start: {start:?}",
-             id = id, start = start, source = source, destination = destination)
+            source: {source}\n\
+            destination: {destination}\n\
+            start: {start:?}",
+            id = id, start = start, source = source, destination = destination)
   }
 }
 
@@ -31,31 +31,31 @@ impl ToYaml for JobStatus {
           .map_or_else(|| "~".to_owned(), |d| format!("{:?}", d));
         let rate = rate.clone().unwrap_or_else(|| "~".to_owned());
         format!("type: clone\n\
-                 {common_yaml}\n\
-                 complete: {complete}\n\
-                 rate: {rate}\n\
-                 estimated_finish: {finish}",
-                 common_yaml = common.to_yaml(), complete = complete_yaml_float, rate = rate,
-                 finish = estimated_finish)
+                {common_yaml}\n\
+                complete: {complete}\n\
+                rate: {rate}\n\
+                estimated_finish: {finish}",
+                common_yaml = common.to_yaml(), complete = complete_yaml_float, rate = rate,
+                finish = estimated_finish)
       },
 
       &JobStatus::Finished { ref finish, ref rate, ref common, image_size } => {
         format!("type: clone\n\
-                 {common_yaml}\n\
-                 complete: {complete}\n\
-                 rate: \"{rate}\"\n\
-                 finish: {finish:?}\n\
-                 image_size: {image_size}",
-                 common_yaml = common.to_yaml(), complete = "1.0", rate = rate, finish = finish,
-                 image_size = image_size)
+                {common_yaml}\n\
+                complete: {complete}\n\
+                rate: \"{rate}\"\n\
+                finish: {finish:?}\n\
+                image_size: {image_size}",
+                common_yaml = common.to_yaml(), complete = "1.0", rate = rate, finish = finish,
+                image_size = image_size)
       },
 
       &JobStatus::Failed { ref finish, ref common, ref reason } => {
         format!("type: clone-failed\n\
-                 {common_yaml}\n\
-                 finish: {finish:?}\n\
-                 error: {error}",
-                 common_yaml = common.to_yaml(), finish = finish, error = reason)
+                {common_yaml}\n\
+                finish: {finish:?}\n\
+                error: {error}",
+                common_yaml = common.to_yaml(), finish = finish, error = reason)
       }
     }
   }

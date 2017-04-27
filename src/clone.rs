@@ -12,6 +12,7 @@ use std::os::unix::io::{FromRawFd, IntoRawFd, RawFd};
 use std::fs::File;
 use regex::Regex;
 use uuid::Uuid;
+use lsblk;
 
 #[derive(Clone, PartialEq, Debug)]
 pub struct JobStatusCommon {
@@ -53,7 +54,7 @@ fn check_exists(command: &str) -> Result<()> {
 }
 
 fn partclone_cmd(variant: &str) -> Result<String> {
-  let partclone_cmd = env::var("PARTCLONE_CMD").unwrap_or("partclone".to_owned());
+  let partclone_cmd = env::var("APART_PARTCLONE_CMD").unwrap_or("partclone".to_owned());
   let partclone_dd = format!("{}.{}", partclone_cmd, variant);
   check_exists(&partclone_dd)?;
   Ok(partclone_dd.to_string())
@@ -152,11 +153,30 @@ fn read_partclone_output(stderr: ChildStderr, tx: Sender<JobStatus>, info: JobSt
 
 impl CloneJob {
   pub fn new(source: String, destination: String, name: String) -> Result<CloneJob> {
-    let partclone_variant = "dd"; // TODO detect best variant to use
-    let (dest_file, dest_raw_fd) = destination_raw_fd(&destination, &name, partclone_variant)?;
+    let (partclone_variant, partclone_cmd) = match lsblk::fstype(&source) {
+      Some(fstype) => match partclone_cmd(&fstype) {
+        Ok(cmd) => (fstype, cmd),
+        Err(_) => {
+          warn!("No partclone command found for fstype '{}', using dd...", fstype);
+          ("dd".to_owned(), partclone_cmd("dd")?)
+        }
+      },
+      _ => {
+        info!("fstype not found for source '{}', using dd...", source);
+        ("dd".to_owned(), partclone_cmd("dd")?)
+      }
+    };
+    let (dest_file, dest_raw_fd) = destination_raw_fd(&destination, &name, &partclone_variant)?;
 
-    let mut partclone_cmd = Command::new(partclone_cmd(partclone_variant)?)
-      .arg("-s").arg(&source)
+    let mut args = Vec::new();
+    if partclone_variant != "dd" {
+      args.push("-c");
+    }
+    args.push("-s");
+    args.push(&source);
+
+    let mut partclone_cmd = Command::new(partclone_cmd)
+      .args(&args)
       .stdout(Stdio::piped())
       .stdin(Stdio::null())
       .stderr(Stdio::piped())
@@ -171,7 +191,7 @@ impl CloneJob {
     let thread_name = format!("partclone-stderr-reader {}->{}", source, dest_file);
     let (tx, rx) = mpsc::channel();
     let job = CloneJob {
-      source: source,
+      source: source.to_owned(),
       destination: dest_file,
       partclone_cmd: partclone_cmd,
       rx: rx,

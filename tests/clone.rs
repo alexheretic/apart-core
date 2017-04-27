@@ -20,10 +20,10 @@ fn do_clone_job() {
   /// default estimated remaining duration in mock partclone
   let mock_duration = OldDuration::minutes(3) + OldDuration::seconds(2);
 
-  let clone_msg = format!("type: clone
-source: /dev/abc12
-destination: {destination}
-name: do_clone_job", destination = core.tmp_dir());
+  let clone_msg = format!("type: clone\n\
+                          source: /dev/sda5\n\
+                          destination: {destination}\n\
+                          name: do_clone_job", destination = core.tmp_dir());
   core.send(&clone_msg);
   let expected_filename = format!("do_clone_job-{}.apt.dd.gz", Local::now().format("%Y-%m-%dT%H%M"));
 
@@ -35,9 +35,10 @@ name: do_clone_job", destination = core.tmp_dir());
   assert!(start.is_some(), "missing clone.start");
   assert_eq!(msg["complete"].as_f64(), Some(0.0));
   assert_eq!(msg["finish"].as_str(), None);
-  assert_eq!(msg["source"].as_str(), Some("/dev/abc12"));
+  assert_eq!(msg["source"].as_str(), Some("/dev/sda5"));
   assert_eq!(msg["destination"].as_str(), Some(format!("{}/{}", core.tmp_dir(), expected_filename).as_ref()));
-  assert_eq!(core.get_mock_partclone_last_source_of("dd").expect("!last source"), "/dev/abc12");
+  assert_eq!(core.get_mock_partclone_last_source_of("dd").expect("!last source"), "/dev/sda5");
+  assert!(!core.get_mock_partclone_last_arg_c_set_for("dd"), "partclone.dd invoked with '-c'");
 
   assert!(!core.path_of(&format!("{}/{}", core.tmp_dir(), expected_filename)).unwrap().exists());
 
@@ -71,7 +72,7 @@ name: do_clone_job", destination = core.tmp_dir());
   assert!(msg["image_size"].as_i64().is_some(), "missing clone.image_size");
 
   let output = core.get_tmp_file_contents_bytes(&expected_filename).expect("!read $tmp_dir/do_clone_job.apt.gz");
-  assert_eq!(decompress(&output).expect("!decompress"), "mock-partition-/dev/abc12-data");
+  assert_eq!(decompress(&output).expect("!decompress"), "mock-partition-/dev/sda5-data");
 }
 
 fn abs(duration: OldDuration) -> OldDuration {
@@ -82,13 +83,53 @@ fn abs(duration: OldDuration) -> OldDuration {
 }
 
 #[test]
+fn clone_using_partclone_fstype_variant_f2fs() {
+  let core = CoreHandle::new().unwrap();
+
+  let clone_msg = format!("type: clone\n\
+                          source: /dev/sdb3\n\
+                          destination: {destination}\n\
+                          name: f2fs_job", destination = core.tmp_dir());
+  core.send(&clone_msg);
+  let expected_filename = format!("f2fs_job-{}.apt.f2fs.gz", Local::now().format("%Y-%m-%dT%H%M"));
+
+  let ref msg = core.expect_message_with(|msg|
+    msg["type"].as_str() == Some("clone") && msg["rate"].as_str().is_some());
+  assert_eq!(msg["source"].as_str(), Some("/dev/sdb3"));
+  assert_eq!(msg["destination"].as_str(), Some(format!("{}/{}", core.tmp_dir(), expected_filename).as_ref()));
+  assert_eq!(core.get_mock_partclone_last_source_of("f2fs").expect("!last source"), "/dev/sdb3");
+  assert!(core.get_mock_partclone_last_arg_c_set_for("f2fs"),
+    "partclone.f2fs not invoked with '-c'");
+}
+
+#[test]
+fn clone_using_partclone_fstype_variant_ext2() {
+  let core = CoreHandle::new().unwrap();
+
+  let clone_msg = format!("type: clone\n\
+                          source: /dev/sdb1\n\
+                          destination: {destination}\n\
+                          name: ext2_job", destination = core.tmp_dir());
+  core.send(&clone_msg);
+  let expected_filename = format!("ext2_job-{}.apt.ext2.gz", Local::now().format("%Y-%m-%dT%H%M"));
+
+  let ref msg = core.expect_message_with(|msg|
+    msg["type"].as_str() == Some("clone") && msg["rate"].as_str().is_some());
+  assert_eq!(msg["source"].as_str(), Some("/dev/sdb1"));
+  assert_eq!(msg["destination"].as_str(), Some(format!("{}/{}", core.tmp_dir(), expected_filename).as_ref()));
+  assert_eq!(core.get_mock_partclone_last_source_of("ext2").expect("!last source"), "/dev/sdb1");
+  assert!(core.get_mock_partclone_last_arg_c_set_for("ext2"),
+    "partclone.ext2 not invoked with '-c'");
+}
+
+#[test]
 fn cancel_clone_job() {
   let core = CoreHandle::new().unwrap();
 
-  let clone_msg = format!("type: clone
-source: /dev/abc12
-destination: {destination}
-name: cancel_clone_job", destination = core.tmp_dir());
+  let clone_msg = format!("type: clone\n\
+                          source: /dev/sda5\n\
+                          destination: {destination}\n\
+                          name: cancel_clone_job", destination = core.tmp_dir());
   core.send(&clone_msg);
 
   let ref msg = core.expect_message_with(|msg|

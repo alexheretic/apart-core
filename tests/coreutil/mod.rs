@@ -127,8 +127,8 @@ impl CoreHandle {
       .stderr(Stdio::inherit())
       .arg(ipc_address.to_string())
       .env("RUST_LOG", "info")
-      .env("PARTCLONE_CMD", format!("{}/mockpcl", tmp_dir.dir))
-      .env("LSBLK_CMD", format!("{}/mocklsblk", tmp_dir.dir))
+      .env("APART_PARTCLONE_CMD", format!("{}/mockpcl", tmp_dir.dir))
+      .env("APART_LSBLK_CMD", format!("{}/mocklsblk", tmp_dir.dir))
       .spawn()?;
 
     let message = expect_message_from(&socket);
@@ -183,6 +183,13 @@ impl CoreHandle {
 
   pub fn get_mock_partclone_last_source_of(&self, variant: &str) -> Result<String> {
     Ok(self.get_tmp_file_contents_utf8(&format!(".latest.s.mockpcl.{}.txt", variant))?.trim().to_owned())
+  }
+
+  pub fn get_mock_partclone_last_arg_c_set_for(&self, variant: &str) -> bool {
+    if let Ok(contents) = self.get_tmp_file_contents_utf8(&format!(".latest.c.mockpcl.{}.txt", variant)) {
+      return contents.trim() == "1";
+    }
+    false
   }
 
   /// no error if absent
