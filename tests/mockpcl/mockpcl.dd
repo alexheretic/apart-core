@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
 ## mock partclone that records arguments and allows control of output
-## ie for mockpcl.dd:
-##  -s -> .latest.s.mockpcl.dd.txt
-##  -c -> .latest.c.mockpcl.dd.txt
+## ie for mockpcl.ext2:
+##  -s -> .latest.s.mockpcl.ext2.txt
+##  -c -> .latest.c.mockpcl.ext2.txt
+##  -r -> .latest.c.mockpcl.ext2.txt
+##  -o -> .latest.c.mockpcl.ext2.txt
 ##  control with setting complete in .control.mockpcl.dd
 
 set -eu
@@ -11,10 +13,14 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 ME=`basename "$0"`
 source=""
 argc=""
-while getopts 's:c' flag; do
+argr=""
+dest=""
+while getopts 's:cro:' flag; do
   case ${flag} in
     s) source=${OPTARG} ;;
     c) argc="set" ;;
+    r) argr="set" ;;
+    o) dest=${OPTARG} ;;
   esac
 done
 
@@ -28,15 +34,28 @@ if [[ $argc ]]; then
   echo "1" > "$DIR/.latest.c.$ME.txt"
 fi
 
+rm -f "$DIR/.latest.r.$ME.txt"
+if [[ $argr ]]; then
+  echo "1" > "$DIR/.latest.r.$ME.txt"
+fi
+
+rm -f "$DIR/.latest.o.$ME.txt"
+if [[ $dest ]]; then
+  echo "$dest" > "$DIR/.latest.o.$ME.txt"
+fi
+
 touch "$DIR/.control.$ME";
 complete="0.00"
 rate="9.99GB/min"
 remaining="00:03:02"
 
-function echo_output_head {
+function echo_output_head_p1 {
   echo "Partclone v0.2.89-mock http://partclone.org" >&2
-  echo "Starting to clone/restore (/dev/sda5) to (-) with dd mode" >&2
-  echo "Calculating bitmap... Please wait... done!" >&2
+  echo "Starting to clone/restore (-) to (-) with dd mode" >&2
+  echo -n "Calculating bitmap... " >&2
+}
+function echo_output_head_p2 {
+  echo "done!" >&2
   echo "File system:  raw" >&2
   echo "Device size:   32.2 GB = 62914560 Blocks" >&2
   echo "Space in use:  32.2 GB = 62914560 Blocks" >&2
@@ -55,12 +74,16 @@ function move_cursor_up_2 { echo -en "\e[2A" >&2; }
 function read_control { source "$DIR/.control.$ME"; }
 
 ## mimick partclone output
-echo_output_head
+echo_output_head_p1
+sleep 0.05  # wait 50ms before rate, estimated_finish are available
+echo_output_head_p2
 echo_output_tail
 move_cursor_up_2
 read_control
 
-echo -n "mock-parti" # mock output part 1/2
+if [[ ! $dest ]]; then
+  echo -n "mock-parti" # mock output part 1/2
+fi
 
 while [ "$complete" != "100.00" ]; do
   echo_output_tail
@@ -71,5 +94,7 @@ done
 
 # control -> complete="100.00"
 echo_output_tail
-echo -n "tion-$source-data" # mock output part 2/2
+if [[ ! $dest ]]; then
+  echo -n "tion-$source-data" # mock output part 2/2
+fi
 echo_final

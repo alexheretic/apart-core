@@ -24,15 +24,22 @@ fn do_clone_job() {
                           source: /dev/sda5\n\
                           destination: {destination}\n\
                           name: do_clone_job", destination = core.tmp_dir());
+
+  let send_time = UTC::now();
   core.send(&clone_msg);
   let expected_filename = format!("do_clone_job-{}.apt.dd.gz", Local::now().format("%Y-%m-%dT%H%M"));
 
-  let ref msg = core.expect_message_with(|msg|
-    msg["type"].as_str() == Some("clone") && msg["rate"].as_str().is_some());
+  let ref msg = core.expect_message_with(|msg| msg["type"].as_str() == Some("clone"));
   let id = msg["id"].as_str();
   let start = msg["start"].as_str();
-  assert!(id.is_some(), "missing clone.id");
-  assert!(start.is_some(), "missing clone.start");
+  // ensure we get a timely initial message not waiting for partclone rate/estimated remaining
+  assert!(UTC::now().signed_duration_since(send_time) <= OldDuration::milliseconds(50));
+
+  let ref msg = core.expect_message_with(|msg|
+    msg["type"].as_str() == Some("clone") && msg["rate"].as_str().is_some());
+
+  assert_eq!(msg["id"].as_str(), id);
+  assert_eq!(msg["start"].as_str(), start);
   assert_eq!(msg["complete"].as_f64(), Some(0.0));
   assert_eq!(msg["finish"].as_str(), None);
   assert_eq!(msg["source"].as_str(), Some("/dev/sda5"));

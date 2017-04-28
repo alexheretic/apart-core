@@ -11,7 +11,9 @@ extern crate uuid;
 mod server;
 mod inbound;
 mod outbound;
+mod partclone;
 mod clone;
+mod restore;
 mod lsblk;
 
 use server::Server;

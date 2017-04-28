@@ -2,7 +2,8 @@ extern crate zmq;
 
 use inbound::Request;
 use inbound::Request::*;
-use clone::{CloneJob, JobStatus};
+use clone::{CloneJob, CloneStatus};
+use restore::*;
 use outbound::*;
 use std::error::Error;
 use std::thread;
@@ -12,7 +13,8 @@ use lsblk;
 
 pub struct Server {
   socket: zmq::Socket,
-  jobs: HashMap<String, CloneJob>
+  clones: HashMap<String, CloneJob>,
+  restores: HashMap<String, RestoreJob>
 }
 
 impl Drop for Server {
@@ -34,7 +36,8 @@ impl Server {
 
     let mut server = Server {
       socket: socket,
-      jobs: HashMap::new()
+      clones: HashMap::new(),
+      restores: HashMap::new()
     };
     server.zmq_send(&status_yaml("started", lsblk::blockdevices()?))?;
     server.run()
@@ -63,14 +66,26 @@ impl Server {
               match CloneJob::new(source, destination, name) {
                 Ok(job) => {
                   info!("Starting new job: {}", job);
-                  self.jobs.insert(job.id().to_owned(), job);
+                  self.clones.insert(job.id().to_owned(), job);
                 },
                 Err(err) => error!("Clonejob creation failed: {}", err)
               }
             },
-            Some(CancelCloneRequest { ref id }) => if let Some(job) = self.jobs.remove(id) {
+            Some(RestoreRequest { source, destination }) => {
+              match RestoreJob::new(source, destination) {
+                Ok(job) => {
+                  info!("Starting new job: {:?}", job);
+                  self.restores.insert(job.id().to_owned(), job);
+                },
+                Err(err) => error!("RestoreJob creation failed: {}", err)
+              }
+            },
+            Some(CancelCloneRequest { id }) => if let Some(job) = self.clones.remove(&id) {
               self.zmq_send(&job.fail_status("Cancelled").to_yaml())?;
-            }
+            },
+            Some(CancelRestoreRequest { id }) => if let Some(job) = self.restores.remove(&id) {
+              self.zmq_send(&job.fail_status("Cancelled").to_yaml())?;
+            },
           };
           true
         },
@@ -83,11 +98,11 @@ impl Server {
       };
 
       let mut finished_job_ids = Vec::new();
-      for (id, job) in &self.jobs {
-        match job.rx.try_recv() {
+      for (id, job) in &self.clones {
+        match job.try_recv() {
           Ok(status) => {
             self.zmq_send(&status.to_yaml())?;
-            if let JobStatus::Finished {..} = status {
+            if let CloneStatus::Finished {..} = status {
               finished_job_ids.push(id.to_owned());
             }
             did_work = true;
@@ -95,12 +110,29 @@ impl Server {
           _ => ()
         }
       }
-
       for id in &finished_job_ids { // allow CloneJob Drop to cleanup resources
-        self.jobs.remove(id);
+        self.clones.remove(id);
+      }
+
+      let mut finished_job_ids = Vec::new();
+      for (id, job) in &self.restores {
+        match job.try_recv() {
+          Ok(status) => {
+            self.zmq_send(&status.to_yaml())?;
+            if let RestoreStatus::Finished {..} = status {
+              finished_job_ids.push(id.to_owned());
+            }
+            did_work = true;
+          }
+          _ => ()
+        }
+      }
+      for id in &finished_job_ids { // allow CloneJob Drop to cleanup resources
+        self.clones.remove(id);
       }
 
       if !did_work { // go easy on cpu when there doesn't seem like much to do
+        // TODO wait for 10ms on incoming messages instead
         thread::sleep(Duration::from_millis(10));
       }
     }

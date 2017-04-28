@@ -1,4 +1,6 @@
-use clone::{JobStatus, JobStatusCommon};
+use chrono::prelude::*;
+use clone::*;
+use restore::*;
 use json::JsonValue;
 use yaml_rust::yaml;
 use yaml_rust::yaml::Yaml;
@@ -8,26 +10,43 @@ pub trait ToYaml {
   fn to_yaml(&self) -> String;
 }
 
-impl ToYaml for JobStatusCommon {
-  fn to_yaml(&self) -> String {
-    let &JobStatusCommon { ref start, ref source, ref destination, ref id, .. } = self;
-    format!("id: {id}\n\
-            source: {source}\n\
-            destination: {destination}\n\
-            start: {start:?}",
-            id = id, start = start, source = source, destination = destination)
+fn common_yaml(start: DateTime<UTC>, source: &str, destination: &str, id: &str) -> String {
+  format!("id: {id}\n\
+          source: {source}\n\
+          destination: {destination}\n\
+          start: {start:?}",
+          id = id, start = start, source = source, destination = destination)
+}
+
+fn complete_yaml_str(complete: f64) -> String {
+  let complete = complete.to_string();
+  return if complete.len() == 1 {
+    complete + ".0"
+  }
+  else {
+    complete
   }
 }
 
-impl ToYaml for JobStatus {
+impl ToYaml for CloneStatusCommon {
+  fn to_yaml(&self) -> String {
+    let &CloneStatusCommon { start, ref source, ref destination, ref id, .. } = self;
+    common_yaml(start, &source, &destination, &id)
+  }
+}
+
+impl<'a> ToYaml for RestoreStatusCommon<'a> {
+  fn to_yaml(&self) -> String {
+    let &RestoreStatusCommon { start, source, destination, id, .. } = self;
+    common_yaml(start, source, destination, id)
+  }
+}
+
+impl ToYaml for CloneStatus {
   fn to_yaml(&self) -> String {
     match self {
-      &JobStatus::Running { ref complete, ref rate, ref common, ref estimated_finish } => {
-        let complete_yaml_float = match complete.to_string() {
-          ref s if s.len() == 1 => s.to_owned() + ".0",
-          s => s
-        };
-        let estimated_finish = estimated_finish.clone()
+      &CloneStatus::Running { complete, ref rate, ref common, ref estimated_finish } => {
+        let estimated_finish = estimated_finish
           .map_or_else(|| "~".to_owned(), |d| format!("{:?}", d));
         let rate = rate.clone().unwrap_or_else(|| "~".to_owned());
         format!("type: clone\n\
@@ -35,23 +54,55 @@ impl ToYaml for JobStatus {
                 complete: {complete}\n\
                 rate: {rate}\n\
                 estimated_finish: {finish}",
-                common_yaml = common.to_yaml(), complete = complete_yaml_float, rate = rate,
+                common_yaml = common.to_yaml(), complete = complete_yaml_str(complete), rate = rate,
                 finish = estimated_finish)
       },
-
-      &JobStatus::Finished { ref finish, ref rate, ref common, image_size } => {
+      &CloneStatus::Finished { ref finish, ref rate, ref common, image_size } => {
         format!("type: clone\n\
                 {common_yaml}\n\
-                complete: {complete}\n\
+                complete: 1.0\n\
                 rate: \"{rate}\"\n\
                 finish: {finish:?}\n\
                 image_size: {image_size}",
-                common_yaml = common.to_yaml(), complete = "1.0", rate = rate, finish = finish,
+                common_yaml = common.to_yaml(), rate = rate, finish = finish,
                 image_size = image_size)
       },
-
-      &JobStatus::Failed { ref finish, ref common, ref reason } => {
+      &CloneStatus::Failed { ref finish, ref common, ref reason } => {
         format!("type: clone-failed\n\
+                {common_yaml}\n\
+                finish: {finish:?}\n\
+                error: {error}",
+                common_yaml = common.to_yaml(), finish = finish, error = reason)
+      }
+    }
+  }
+}
+
+impl<'a> ToYaml for RestoreStatus<'a> {
+  fn to_yaml(&self) -> String {
+    match self {
+      &RestoreStatus::Running { ref common, complete, ref rate, estimated_finish } => {
+        warn!("{:?}, {:?}", rate, estimated_finish);
+        let estimated_finish = estimated_finish
+          .map_or_else(|| "~".to_owned(), |d| format!("{:?}", d));
+        let rate = rate.clone().unwrap_or_else(|| "~".to_owned());
+        format!("type: restore\n\
+                {common_yaml}\n\
+                complete: {complete}\n\
+                rate: {rate}\n\
+                estimated_finish: {finish}",
+                common_yaml = common.to_yaml(), complete = complete_yaml_str(complete), rate = rate,
+                finish = estimated_finish)
+      },
+      &RestoreStatus::Finished { ref common, finish } => {
+        format!("type: restore\n\
+                {common_yaml}\n\
+                complete: 1.0\n\
+                finish: {finish:?}",
+                finish = finish, common_yaml = common.to_yaml())
+      },
+      &RestoreStatus::Failed { ref common, ref reason, finish } => {
+        format!("type: restore-failed\n\
                 {common_yaml}\n\
                 finish: {finish:?}\n\
                 error: {error}",
@@ -153,9 +204,9 @@ mod tests {
   }
 
   #[test]
-  fn job_running_to_yaml() {
-    let yaml_str = JobStatus::Running {
-      common: JobStatusCommon {
+  fn clone_running_to_yaml() {
+    let yaml_str = CloneStatus::Running {
+      common: CloneStatusCommon {
         source: "/dev/ars2".to_owned(),
         destination: "/mnt/backups/ars2.gz".to_owned(),
         inprogress_destination: "/mnt/backups/ars2.gz.inprogress".to_owned(),
@@ -176,9 +227,31 @@ mod tests {
   }
 
   #[test]
+  fn restore_running_to_yaml() {
+    let yaml_str = RestoreStatus::Running {
+      common: RestoreStatusCommon {
+        source: "/mnt/backups/ars2.gz",
+        destination: "/dev/ars2",
+        start: UTC.ymd(2017, 4, 18).and_hms(15, 44, 12),
+        id: "some-id"
+      },
+      estimated_finish: Some(UTC.ymd(2017, 4, 18).and_hms(15, 45, 00)),
+      complete: 0.123,
+      rate: Some("1GB/s".to_owned()) }.to_yaml();
+    let yaml = YamlLoader::load_from_str(&yaml_str).unwrap().remove(0);
+    assert_eq!(yaml["type"].as_str(), Some("restore"));
+    assert_eq!(yaml["complete"].as_f64(), Some(0.123));
+    assert_eq!(yaml["id"].as_str(), Some("some-id"));
+    assert_eq!(yaml["rate"].as_str(), Some("1GB/s"));
+    assert_eq!(yaml["start"].as_str(), Some("2017-04-18T15:44:12Z"));
+    assert_eq!(yaml["destination"].as_str(), Some("/dev/ars2"));
+    assert_eq!(yaml["source"].as_str(), Some("/mnt/backups/ars2.gz"));
+  }
+
+  #[test]
   fn job_running_none_options() {
-    let yaml_str = JobStatus::Running {
-      common: JobStatusCommon {
+    let yaml_str = CloneStatus::Running {
+      common: CloneStatusCommon {
         source: "/dev/ars2".to_owned(),
         destination: "/mnt/backups/ars2.gz".to_owned(),
         inprogress_destination: "/mnt/backups/ars2.gz.inprogress".to_owned(),
@@ -194,9 +267,9 @@ mod tests {
   }
 
   #[test]
-  fn job_finished_to_yaml() {
-    let yaml_str = JobStatus::Finished {
-      common: JobStatusCommon {
+  fn clone_finished_to_yaml() {
+    let yaml_str = CloneStatus::Finished {
+      common: CloneStatusCommon {
         source: "/dev/ars3".to_owned(),
         destination: "/mnt/backups/ars3.gz".to_owned(),
         inprogress_destination: "/mnt/backups/ars2.gz.inprogress".to_owned(),
@@ -219,9 +292,29 @@ mod tests {
   }
 
   #[test]
+  fn restore_finished_to_yaml() {
+    let yaml_str = RestoreStatus::Finished {
+      common: RestoreStatusCommon {
+        source: "/mnt/backups/ars3.gz",
+        destination: "/dev/ars3",
+        start: UTC.ymd(2017, 4, 18).and_hms(15, 44, 12),
+        id: "some-id"
+      },
+      finish: UTC.ymd(2017, 4, 18).and_hms(15, 45, 34) }.to_yaml();
+    let yaml = YamlLoader::load_from_str(&yaml_str).unwrap().remove(0);
+    assert_eq!(yaml["type"].as_str(), Some("restore"));
+    assert_eq!(yaml["complete"].as_f64(), Some(1.0));
+    assert_eq!(yaml["id"].as_str(), Some("some-id"));
+    assert_eq!(yaml["start"].as_str(), Some("2017-04-18T15:44:12Z"));
+    assert_eq!(yaml["finish"].as_str(), Some("2017-04-18T15:45:34Z"));
+    assert_eq!(yaml["source"].as_str(), Some("/mnt/backups/ars3.gz"));
+    assert_eq!(yaml["destination"].as_str(), Some("/dev/ars3"));
+  }
+
+  #[test]
   fn job_failed_to_yaml() {
-    let yaml_str = JobStatus::Failed {
-      common: JobStatusCommon {
+    let yaml_str = CloneStatus::Failed {
+      common: CloneStatusCommon {
         source: "/dev/ars3".to_owned(),
         destination: "/mnt/backups/ars3.gz".to_owned(),
         inprogress_destination: "/mnt/backups/ars2.gz.inprogress".to_owned(),
@@ -241,8 +334,8 @@ mod tests {
 
   #[test]
   fn job_running_to_yaml_ensure_float() {
-    let yaml_str = JobStatus::Running {
-      common: JobStatusCommon {
+    let yaml_str = CloneStatus::Running {
+      common: CloneStatusCommon {
         source: "/dev/ars3".to_owned(),
         destination: "/mnt/backups/ars3.gz".to_owned(),
         inprogress_destination: "/mnt/backups/ars2.gz.inprogress".to_owned(),
@@ -254,8 +347,8 @@ mod tests {
       rate: Some("2GB/s".to_owned()) }.to_yaml();
     let yaml = YamlLoader::load_from_str(&yaml_str).unwrap().remove(0);
     assert_eq!(yaml["complete"].as_f64(), Some(1.0));
-    let yaml_str = JobStatus::Running {
-      common: JobStatusCommon {
+    let yaml_str = CloneStatus::Running {
+      common: CloneStatusCommon {
         source: "/dev/ars3".to_owned(),
         destination: "/mnt/backups/ars3.gz".to_owned(),
         inprogress_destination: "/mnt/backups/ars2.gz.inprogress".to_owned(),

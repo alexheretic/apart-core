@@ -152,6 +152,7 @@ impl CoreHandle {
       if predicate(&msg) {
         return msg;
       }
+      // println!("Ignoring non-matching msg: {:?}", msg);
       assert!(Instant::now().duration_since(start) < Duration::from_secs(1),
         "expected message not received within 1 second");
     }
@@ -185,8 +186,19 @@ impl CoreHandle {
     Ok(self.get_tmp_file_contents_utf8(&format!(".latest.s.mockpcl.{}.txt", variant))?.trim().to_owned())
   }
 
+  pub fn get_mock_partclone_last_destination_of(&self, variant: &str) -> Result<String> {
+    Ok(self.get_tmp_file_contents_utf8(&format!(".latest.o.mockpcl.{}.txt", variant))?.trim().to_owned())
+  }
+
   pub fn get_mock_partclone_last_arg_c_set_for(&self, variant: &str) -> bool {
     if let Ok(contents) = self.get_tmp_file_contents_utf8(&format!(".latest.c.mockpcl.{}.txt", variant)) {
+      return contents.trim() == "1";
+    }
+    false
+  }
+
+  pub fn get_mock_partclone_last_arg_r_set_for(&self, variant: &str) -> bool {
+    if let Ok(contents) = self.get_tmp_file_contents_utf8(&format!(".latest.r.mockpcl.{}.txt", variant)) {
       return contents.trim() == "1";
     }
     false
