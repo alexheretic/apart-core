@@ -1,23 +1,16 @@
 use chrono::prelude::*;
-use std::{thread, str, fmt, env, fs};
-use std::path::Path;
-use std::process::{Command, Child, Stdio, ChildStderr};
+use std::{thread, str, fmt};
+use std::process::{Command, Child, Stdio};
 use wait_timeout::ChildExt;
 use std::time::Duration;
-use chrono::Duration as OldDuration;
-use std::io::{ErrorKind, BufReader, BufRead};
 use std::sync::mpsc;
-use std::sync::mpsc::{Receiver, Sender, SendError};
-use std::os::unix::io::{FromRawFd, IntoRawFd, RawFd};
-use std::fs::File;
-use std::rc::Rc;
-use regex::Regex;
+use std::sync::mpsc::{Receiver};
+use std::os::unix::io::{FromRawFd, IntoRawFd};
 use uuid::Uuid;
-use lsblk;
 use partclone;
 use partclone::*;
 use std::error::Error;
-use std::cell::{RefCell, Cell};
+use std::cell::{Cell};
 use clone::partclone_variant_from_image;
 
 #[derive(Debug)]
@@ -45,6 +38,7 @@ pub struct RestoreJob {
   source: String,
   destination: String,
   id: String,
+  cat_cmd: Child,
   partclone_cmd: Child,
   start: DateTime<UTC>,
   sent_first_msg: Cell<bool>,
@@ -66,7 +60,6 @@ impl<'j> RestoreJob {
 
     Ok(match self.rx.try_recv()? {
       PartcloneStatus::Running { rate, estimated_finish, complete } => {
-        warn!("{}, {}", rate, estimated_finish);
         RestoreStatus::Running {
           common: self.clone_status_common(),
           complete,
@@ -146,10 +139,11 @@ impl<'j> RestoreJob {
       })?;
 
     let job = RestoreJob {
-      source: source,
-      destination: destination,
-      partclone_cmd: partclone_cmd,
-      rx: rx,
+      source,
+      destination,
+      cat_cmd: cat,
+      partclone_cmd,
+      rx,
       start: UTC::now(),
       sent_first_msg: Cell::new(false),
       id: Uuid::new_v4().to_string()
@@ -162,5 +156,40 @@ impl<'j> RestoreJob {
 impl fmt::Display for RestoreJob {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
     write!(f, "RestoreJob({}->{})", self.source, self.destination)
+  }
+}
+
+impl Drop for RestoreJob {
+  fn drop(&mut self) {
+    match self.partclone_cmd.wait_timeout(Duration::from_secs(0)) {
+      Ok(None) => {
+        if let Err(x) = self.partclone_cmd.kill() {
+          error!("Failed to kill RestoreJob#partclone_cmd: {}", x);
+        }
+      },
+      Ok(Some(status)) => {
+        if !status.success() {
+          warn!("RestoreJob#partclone_cmd finished with != 0 exit");
+        }
+      },
+      Err(x) => {
+        error!("Failed to drop RestoreJob: {}", x);
+      }
+    }
+    match self.cat_cmd.wait_timeout(Duration::from_secs(0)) {
+      Ok(None) => {
+        if let Err(x) = self.partclone_cmd.kill() {
+          error!("Failed to kill RestoreJob#cat_cmd: {}", x);
+        }
+      },
+      Ok(Some(status)) => {
+        if !status.success() {
+          warn!("RestoreJob#cat_cmd finished with != 0 exit");
+        }
+      },
+      Err(x) => {
+        error!("Failed to drop RestoreJob: {}", x);
+      }
+    }
   }
 }

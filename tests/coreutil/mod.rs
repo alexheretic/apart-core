@@ -162,10 +162,11 @@ impl CoreHandle {
     self.socket.send_str(msg, 0).expect("sending to core failed");
   }
 
-  pub fn set_mock_partclone(&self, MockPartcloneState { complete, rate }: MockPartcloneState) -> Result<()> {
+  pub fn set_mock_partclone(&self, variant: &str, MockPartcloneState { complete, rate }: MockPartcloneState) -> Result<()> {
     let mut file = fs::OpenOptions::new()
       .write(true)
-      .open(self.tmp_dir.existing_path_of(".control.mockpcl.dd")?)?;
+      .create(true)
+      .open(self.path_of(&format!(".control.mockpcl.{}", variant))?)?;
     write!(file, "complete={:.2}\nrate={}", complete * 100., rate)?;
     Ok(())
   }
@@ -182,23 +183,8 @@ impl CoreHandle {
     Ok(contents)
   }
 
-  pub fn get_mock_partclone_last_source_of(&self, variant: &str) -> Result<String> {
-    Ok(self.get_tmp_file_contents_utf8(&format!(".latest.s.mockpcl.{}.txt", variant))?.trim().to_owned())
-  }
-
-  pub fn get_mock_partclone_last_destination_of(&self, variant: &str) -> Result<String> {
-    Ok(self.get_tmp_file_contents_utf8(&format!(".latest.o.mockpcl.{}.txt", variant))?.trim().to_owned())
-  }
-
-  pub fn get_mock_partclone_last_arg_c_set_for(&self, variant: &str) -> bool {
-    if let Ok(contents) = self.get_tmp_file_contents_utf8(&format!(".latest.c.mockpcl.{}.txt", variant)) {
-      return contents.trim() == "1";
-    }
-    false
-  }
-
-  pub fn get_mock_partclone_last_arg_r_set_for(&self, variant: &str) -> bool {
-    if let Ok(contents) = self.get_tmp_file_contents_utf8(&format!(".latest.r.mockpcl.{}.txt", variant)) {
+  pub fn tmp_file_contents_is_1(&self, filename: &str) -> bool {
+    if let Ok(contents) = self.get_tmp_file_contents_utf8(filename) {
       return contents.trim() == "1";
     }
     false

@@ -74,7 +74,7 @@ impl Server {
             Some(RestoreRequest { source, destination }) => {
               match RestoreJob::new(source, destination) {
                 Ok(job) => {
-                  info!("Starting new job: {:?}", job);
+                  info!("Starting new job: {}", job);
                   self.restores.insert(job.id().to_owned(), job);
                 },
                 Err(err) => error!("RestoreJob creation failed: {}", err)

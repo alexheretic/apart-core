@@ -11,6 +11,9 @@ set -eu
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 ME=`basename "$0"`
+
+rm -f "$DIR/.latest.finished.$ME.txt"
+
 source=""
 argc=""
 argr=""
@@ -26,22 +29,25 @@ done
 
 rm -f "$DIR/.latest.s.$ME.txt"
 if [[ $source ]]; then
-  echo "$source" > "$DIR/.latest.s.$ME.txt"
+  echo -n "$source" > "$DIR/.latest.s.$ME.txt"
 fi
 
 rm -f "$DIR/.latest.c.$ME.txt"
 if [[ $argc ]]; then
-  echo "1" > "$DIR/.latest.c.$ME.txt"
+  echo -n "1" > "$DIR/.latest.c.$ME.txt"
 fi
 
 rm -f "$DIR/.latest.r.$ME.txt"
 if [[ $argr ]]; then
-  echo "1" > "$DIR/.latest.r.$ME.txt"
+  echo -n "1" > "$DIR/.latest.r.$ME.txt"
 fi
 
 rm -f "$DIR/.latest.o.$ME.txt"
+rm -f "$DIR/.latest.stdin.$ME.txt"
 if [[ $dest ]]; then
-  echo "$dest" > "$DIR/.latest.o.$ME.txt"
+  echo -n "$dest" > "$DIR/.latest.o.$ME.txt"
+  ## when -o is present assume we're getting stdin too
+  echo -n "$(cat)" > "$DIR/.latest.stdin.$ME.txt"
 fi
 
 touch "$DIR/.control.$ME";
@@ -98,3 +104,5 @@ if [[ ! $dest ]]; then
   echo -n "tion-$source-data" # mock output part 2/2
 fi
 echo_final
+
+echo -n "1" > "$DIR/.latest.finished.$ME.txt"

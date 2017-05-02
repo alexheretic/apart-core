@@ -82,7 +82,6 @@ impl<'a> ToYaml for RestoreStatus<'a> {
   fn to_yaml(&self) -> String {
     match self {
       &RestoreStatus::Running { ref common, complete, ref rate, estimated_finish } => {
-        warn!("{:?}, {:?}", rate, estimated_finish);
         let estimated_finish = estimated_finish
           .map_or_else(|| "~".to_owned(), |d| format!("{:?}", d));
         let rate = rate.clone().unwrap_or_else(|| "~".to_owned());

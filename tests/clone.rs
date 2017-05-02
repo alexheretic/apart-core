@@ -44,12 +44,14 @@ fn do_clone_job() {
   assert_eq!(msg["finish"].as_str(), None);
   assert_eq!(msg["source"].as_str(), Some("/dev/sda5"));
   assert_eq!(msg["destination"].as_str(), Some(format!("{}/{}", core.tmp_dir(), expected_filename).as_ref()));
-  assert_eq!(core.get_mock_partclone_last_source_of("dd").expect("!last source"), "/dev/sda5");
-  assert!(!core.get_mock_partclone_last_arg_c_set_for("dd"), "partclone.dd invoked with '-c'");
+  assert_eq!(core.get_tmp_file_contents_utf8(".latest.s.mockpcl.dd.txt").expect("!last source"),
+    "/dev/sda5");
+  assert!(!core.tmp_file_contents_is_1(".latest.c.mockpcl.dd.txt"),
+    "partclone.dd invoked with '-c'");
 
   assert!(!core.path_of(&format!("{}/{}", core.tmp_dir(), expected_filename)).unwrap().exists());
 
-  core.set_mock_partclone(MockPartcloneState{ complete: 0.5634, rate: "0.01GB/min".to_owned() })
+  core.set_mock_partclone("dd", MockPartcloneState{ complete: 0.5634, rate: "0.01GB/min".to_owned() })
     .expect("!set_mock_partclone");
   let ref msg = core.expect_message_with(|msg| msg["complete"].as_f64() == Some(0.5634));
   let expected_estimated_finished_time = UTC::now() + mock_duration;
@@ -69,7 +71,7 @@ fn do_clone_job() {
 
   assert!(!core.path_of(&format!("{}/{}", core.tmp_dir(), expected_filename)).unwrap().exists());
 
-  core.set_mock_partclone(MockPartcloneState{ complete: 1.0, rate: "12.23GB/min".to_owned() })
+  core.set_mock_partclone("dd", MockPartcloneState{ complete: 1.0, rate: "12.23GB/min".to_owned() })
     .expect("!set_mock_partclone");
   let ref msg = core.expect_message_with(|msg| msg["complete"].as_f64() == Some(1.0));
   assert_eq!(msg["id"].as_str(), id);
@@ -80,6 +82,8 @@ fn do_clone_job() {
 
   let output = core.get_tmp_file_contents_bytes(&expected_filename).expect("!read $tmp_dir/do_clone_job.apt.gz");
   assert_eq!(decompress(&output).expect("!decompress"), "mock-partition-/dev/sda5-data");
+
+  assert!(core.tmp_file_contents_is_1(".latest.finished.mockpcl.dd.txt"), "partclone didn't finish");
 }
 
 fn abs(duration: OldDuration) -> OldDuration {
@@ -99,14 +103,16 @@ fn clone_using_partclone_fstype_variant_f2fs() {
                           name: f2fs_job", destination = core.tmp_dir());
   core.send(&clone_msg);
   let expected_filename = format!("f2fs_job-{}.apt.f2fs.gz", Local::now().format("%Y-%m-%dT%H%M"));
-
-  let ref msg = core.expect_message_with(|msg|
-    msg["type"].as_str() == Some("clone") && msg["rate"].as_str().is_some());
+  core.set_mock_partclone("f2fs", MockPartcloneState{ complete: 1.0, rate: "1.23GB/min".to_owned() })
+    .expect("!set_mock_partclone");
+  let ref msg = core.expect_message_with(|msg| msg["complete"].as_f64() == Some(1.0));
   assert_eq!(msg["source"].as_str(), Some("/dev/sdb3"));
   assert_eq!(msg["destination"].as_str(), Some(format!("{}/{}", core.tmp_dir(), expected_filename).as_ref()));
-  assert_eq!(core.get_mock_partclone_last_source_of("f2fs").expect("!last source"), "/dev/sdb3");
-  assert!(core.get_mock_partclone_last_arg_c_set_for("f2fs"),
+  assert_eq!(core.get_tmp_file_contents_utf8(".latest.s.mockpcl.f2fs.txt").expect("!last source"),
+    "/dev/sdb3");
+  assert!(core.tmp_file_contents_is_1(".latest.c.mockpcl.f2fs.txt"),
     "partclone.f2fs not invoked with '-c'");
+  assert!(core.tmp_file_contents_is_1(".latest.finished.mockpcl.f2fs.txt"), "partclone didn't finish");
 }
 
 #[test]
@@ -120,13 +126,18 @@ fn clone_using_partclone_fstype_variant_ext2() {
   core.send(&clone_msg);
   let expected_filename = format!("ext2_job-{}.apt.ext2.gz", Local::now().format("%Y-%m-%dT%H%M"));
 
-  let ref msg = core.expect_message_with(|msg|
-    msg["type"].as_str() == Some("clone") && msg["rate"].as_str().is_some());
+  core.set_mock_partclone("ext2", MockPartcloneState{complete: 1.0, rate: "1.23GB/min".to_owned()})
+    .expect("!set_mock_partclone");
+  let ref msg = core.expect_message_with(|msg| msg["complete"].as_f64() == Some(1.0));
   assert_eq!(msg["source"].as_str(), Some("/dev/sdb1"));
-  assert_eq!(msg["destination"].as_str(), Some(format!("{}/{}", core.tmp_dir(), expected_filename).as_ref()));
-  assert_eq!(core.get_mock_partclone_last_source_of("ext2").expect("!last source"), "/dev/sdb1");
-  assert!(core.get_mock_partclone_last_arg_c_set_for("ext2"),
+  assert_eq!(msg["destination"].as_str(),
+    Some(format!("{}/{}", core.tmp_dir(), expected_filename).as_ref()));
+  assert_eq!(core.get_tmp_file_contents_utf8(".latest.s.mockpcl.ext2.txt").expect("!last source"),
+    "/dev/sdb1");
+  assert!(core.tmp_file_contents_is_1(".latest.c.mockpcl.ext2.txt"),
     "partclone.ext2 not invoked with '-c'");
+  assert!(core.tmp_file_contents_is_1(".latest.finished.mockpcl.ext2.txt"),
+    "partclone didn't finish");
 }
 
 #[test]
@@ -144,7 +155,7 @@ fn cancel_clone_job() {
   let id = msg["id"].as_str();
   let destination = msg["destination"].as_str().unwrap();
 
-  core.set_mock_partclone(MockPartcloneState{ complete: 0.7865, rate: "9.00GB/min".to_owned() })
+  core.set_mock_partclone("dd", MockPartcloneState{ complete: 0.7865, rate: "9.00GB/min".to_owned() })
     .expect("!set_mock_partclone");
 
   let ref msg = core.expect_message_with(|msg| msg["rate"].as_str() == Some("9.00GB/min"));
@@ -168,4 +179,6 @@ fn cancel_clone_job() {
       "*.inprogress file not deleted");
     if !Path::new(&inprogress_path).exists() { break; }
   }
+
+  assert!(!core.tmp_file_contents_is_1(".latest.finished.mockpcl.dd.txt"), "partclone not killed");
 }

@@ -12,6 +12,8 @@ use coreutil::*;
 
 // Tests asserting from a client's perspective performing a partition restore
 
+static MOCK_IMAGE_CONTENTS: &str = "mock-partition-/dev/sda5-data";
+
 #[test]
 fn restore_success() {
   let core = CoreHandle::new().unwrap();
@@ -34,10 +36,12 @@ fn restore_success() {
   assert_eq!(msg["finish"].as_str(), None);
   assert_eq!(msg["source"].as_str(), Some(source_image.as_ref()));
   assert_eq!(msg["destination"].as_str(), Some("/dev/abc123"));
-  assert_eq!(core.get_mock_partclone_last_destination_of("dd").expect("!last source"), "/dev/abc123");
-  assert!(!core.get_mock_partclone_last_arg_r_set_for("dd"), "partclone.dd invoked with '-r'");
 
-  core.set_mock_partclone(MockPartcloneState{ complete: 0.5634, rate: "0.01GB/min".to_owned() })
+  assert_eq!(core.get_tmp_file_contents_utf8(".latest.o.mockpcl.dd.txt").expect("!last -o"),
+    "/dev/abc123");
+  assert!(!core.tmp_file_contents_is_1(".latest.r.mockpcl.dd.txt"), "partclone.dd invoked with -r");
+
+  core.set_mock_partclone("dd", MockPartcloneState{ complete: 0.5634, rate: "0.01GB/min".to_owned() })
     .expect("!set_mock_partclone");
   let ref msg = core.expect_message_with(|msg| msg["complete"].as_f64() == Some(0.5634));
   let expected_estimated_finished_time = UTC::now() + mock_duration;
@@ -55,7 +59,7 @@ fn restore_success() {
   assert_eq!(msg["start"].as_str(), start);
   assert_eq!(msg["finish"].as_str(), None);
 
-  core.set_mock_partclone(MockPartcloneState{ complete: 1.0, rate: "12.23GB/min".to_owned() })
+  core.set_mock_partclone("dd", MockPartcloneState{ complete: 1.0, rate: "12.23GB/min".to_owned() })
     .expect("!set_mock_partclone");
   let ref msg = core.expect_message_with(|msg| msg["complete"].as_f64() == Some(1.0));
   assert_eq!(msg["id"].as_str(), id);
@@ -63,7 +67,11 @@ fn restore_success() {
   assert_eq!(msg["start"].as_str(), start);
   assert!(msg["finish"].as_str().is_some(), "missing restore.finish");
 
-  assert_eq!("check actual data", "mock-partition-/dev/sda5-data");
+  let partclone_stdin = core.get_tmp_file_contents_utf8(".latest.stdin.mockpcl.dd.txt")
+    .expect("!.latest.stdin.mockpcl.dd.txt");
+  assert_eq!(partclone_stdin, MOCK_IMAGE_CONTENTS);
+
+  assert!(core.tmp_file_contents_is_1(".latest.finished.mockpcl.dd.txt"), "partclone didn't finish");
 }
 
 fn abs(duration: OldDuration) -> OldDuration {
@@ -83,14 +91,21 @@ fn restore_using_partclone_fstype_variant_f2fs() {
                           destination: /dev/abc122", source = source_image);
   core.send(&clone_msg);
 
-  let ref msg = core.expect_message_with(|msg|
-    msg["type"].as_str() == Some("restore") && msg["rate"].as_str().is_some());
+  core.set_mock_partclone("f2fs", MockPartcloneState{ complete: 1.0, rate: "1.23GB/min".to_owned() })
+    .expect("!set_mock_partclone");
+  let ref msg = core.expect_message_with(|msg| msg["complete"].as_f64() == Some(1.0));
   assert_eq!(msg["source"].as_str(), Some(source_image.as_ref()));
   assert_eq!(msg["destination"].as_str(), Some("/dev/abc122"));
-  assert_eq!(core.get_mock_partclone_last_destination_of("f2fs").expect("!last destination"),
+  assert_eq!(core.get_tmp_file_contents_utf8(".latest.o.mockpcl.f2fs.txt").expect("!last -o"),
     "/dev/abc122");
-  assert!(core.get_mock_partclone_last_arg_r_set_for("f2fs"),
-    "partclone.f2fs not invoked with '-r'");
+  assert!(core.tmp_file_contents_is_1(".latest.r.mockpcl.f2fs.txt"),
+    "partclone.f2fs not invoke with -r");
+
+  let partclone_stdin = core.get_tmp_file_contents_utf8(".latest.stdin.mockpcl.f2fs.txt")
+    .expect("!.latest.stdin.mockpcl.f2fs.txt");
+  assert_eq!(partclone_stdin, MOCK_IMAGE_CONTENTS);
+
+  assert!(core.tmp_file_contents_is_1(".latest.finished.mockpcl.f2fs.txt"), "partclone didn't finish");
 }
 
 #[test]
@@ -103,14 +118,20 @@ fn restore_using_partclone_fstype_variant_ext2() {
                           destination: /dev/abc124", source = source_image);
   core.send(&clone_msg);
 
-  let ref msg = core.expect_message_with(|msg|
-    msg["type"].as_str() == Some("restore") && msg["rate"].as_str().is_some());
+  core.set_mock_partclone("ext2", MockPartcloneState{ complete: 1.0, rate: "1.23GB/min".to_owned() })
+    .expect("!set_mock_partclone");
+  let ref msg = core.expect_message_with(|msg| msg["complete"].as_f64() == Some(1.0));
   assert_eq!(msg["source"].as_str(), Some(source_image.as_ref()));
   assert_eq!(msg["destination"].as_str(), Some("/dev/abc124"));
-  assert_eq!(core.get_mock_partclone_last_destination_of("ext2").expect("!last destination"),
+  assert_eq!(core.get_tmp_file_contents_utf8(".latest.o.mockpcl.ext2.txt").expect("!last -o"),
     "/dev/abc124");
-  assert!(core.get_mock_partclone_last_arg_r_set_for("ext2"),
-    "partclone.ext2 not invoked with '-r'");
+  assert!(core.tmp_file_contents_is_1(".latest.r.mockpcl.ext2.txt"),
+    "partclone.f2fs not invoke with -r");
+
+  let partclone_stdin = core.get_tmp_file_contents_utf8(".latest.stdin.mockpcl.ext2.txt")
+    .expect("!.latest.stdin.mockpcl.ext2.txt");
+  assert_eq!(partclone_stdin, MOCK_IMAGE_CONTENTS);
+  assert!(core.tmp_file_contents_is_1(".latest.finished.mockpcl.ext2.txt"), "partclone didn't finish");
 }
 
 #[test]
@@ -127,7 +148,7 @@ fn restore_then_cancel() {
     msg["type"].as_str() == Some("restore") && msg["rate"].as_str().is_some());
   let id = msg["id"].as_str();
 
-  core.set_mock_partclone(MockPartcloneState{ complete: 0.7865, rate: "9.00GB/min".to_owned() })
+  core.set_mock_partclone("dd", MockPartcloneState{ complete: 0.7865, rate: "9.00GB/min".to_owned() })
     .expect("!set_mock_partclone");
 
   let ref msg = core.expect_message_with(|msg| msg["rate"].as_str() == Some("9.00GB/min"));
@@ -139,4 +160,6 @@ fn restore_then_cancel() {
   let ref msg = core.expect_message_with(|msg| msg["error"].as_str().is_some());
   assert_eq!(msg["id"].as_str(), id);
   assert_eq!(msg["error"].as_str(), Some("Cancelled"));
+
+  assert!(!core.tmp_file_contents_is_1(".latest.finished.mockpcl.dd.txt"), "partclone not cancelled");
 }
