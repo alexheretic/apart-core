@@ -46,7 +46,7 @@ pub fn read_output(stderr: ChildStderr, tx: Sender<PartcloneStatus>)
   let (mut started_main_output, mut synced) = (false, false);
   let duration_re = Regex::new(r"^(\d{2,}):(\d{2}):(\d{2})$").unwrap();
 
-  for line in BufReader::new(stderr).lines() {
+  'read: for line in BufReader::new(stderr).lines() {
     match line {
       Ok(out) => {
         if started_main_output {
@@ -71,7 +71,11 @@ pub fn read_output(stderr: ChildStderr, tx: Sender<PartcloneStatus>)
               }
 
               let rate = cap[3].to_owned();
-              tx.send(PartcloneStatus::Running { estimated_finish, rate, complete })?
+              if let Err(err) = tx.send(PartcloneStatus::Running { estimated_finish, rate, complete }) {
+                // this can be expected if, for example, the job is cancelled
+                debug!("Could not send, job dropped?: {}", err);
+                break 'read;
+              }
             }
             if out.contains("Syncing... OK!") {
               synced = true;
@@ -86,7 +90,9 @@ pub fn read_output(stderr: ChildStderr, tx: Sender<PartcloneStatus>)
     }
   }
   if synced {
-    tx.send(PartcloneStatus::Synced { finish: UTC::now() })?
+    if let Err(err) = tx.send(PartcloneStatus::Synced { finish: UTC::now() }) {
+      debug!("Could not send, job dropped?: {}", err);
+    }
   }
   Ok(())
 }

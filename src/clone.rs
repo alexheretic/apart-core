@@ -6,7 +6,7 @@ use std::process::{Command, Child, Stdio};
 use wait_timeout::ChildExt;
 use std::time::Duration;
 use std::io::{ErrorKind, Error as IoError, Result as IoResult};
-use std::sync::mpsc;
+use std::sync::{mpsc};
 use std::sync::mpsc::{Receiver};
 use std::os::unix::io::{FromRawFd, IntoRawFd, RawFd};
 use std::fs::File;
@@ -47,7 +47,7 @@ pub struct CloneJob {
   start: DateTime<UTC>,
   last_rate: RefCell<Option<String>>,
   sent_first_msg: Cell<bool>,
-  pub rx: Receiver<PartcloneStatus>
+  partclone_status: Receiver<PartcloneStatus>
 }
 
 fn destination_raw_fd(dir: &str, name: &str, partclone_variant: &str) -> IoResult<(String, RawFd)> {
@@ -75,7 +75,7 @@ impl CloneJob {
       })
     }
 
-    Ok(match self.rx.try_recv()? {
+    Ok(match self.partclone_status.try_recv()? {
       PartcloneStatus::Running { rate, estimated_finish, complete } => {
         *self.last_rate.try_borrow_mut()? = Some(rate.clone());
         CloneStatus::Running {
@@ -169,27 +169,25 @@ impl CloneJob {
       .spawn()?;
 
     let stderr = partclone_cmd.stderr.take().unwrap();
-    let (tx, rx) = mpsc::channel();
+    let (tx, partclone_status) = mpsc::channel();
     thread::Builder::new()
       .name(format!("partclone-stderr-reader {}->{}", source, dest_file))
       .spawn(move|| {
         if let Err(e) = partclone::read_output(stderr, tx) {
-          error!("partclone::read_output failed: {}", e);
+          warn!("partclone::read_output failed: {}", e);
         }
       })?;
 
-    let job = CloneJob {
-      source: source,
+    Ok(CloneJob {
+      source,
       destination: dest_file,
-      partclone_cmd: partclone_cmd,
-      rx: rx,
+      partclone_cmd,
+      partclone_status,
       start: UTC::now(),
       id: Uuid::new_v4(),
       last_rate: RefCell::new(None),
       sent_first_msg: Cell::new(false)
-    };
-
-    Ok(job)
+    })
   }
 }
 

@@ -122,6 +122,12 @@ estimated_finish: 2017-04-18T17:40:03Z  # zoned time of estimated finish, presen
 # present when job has finished sucessfully
 finish: 2017-04-18T17:40:02Z  # utc time of finish
 ```
+To cancel a restore send:
+```yaml
+# client -> core
+type: cancel-restore
+id: d4323700
+```
 In the case an error has occurred, ie it's been cancelled, a `type: restore-failed` is sent
 ```yaml
 # core -> client

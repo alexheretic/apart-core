@@ -3,7 +3,7 @@ use std::{thread, str, fmt};
 use std::process::{Command, Child, Stdio};
 use wait_timeout::ChildExt;
 use std::time::Duration;
-use std::sync::mpsc;
+use std::sync::{mpsc};
 use std::sync::mpsc::{Receiver};
 use std::os::unix::io::{FromRawFd, IntoRawFd};
 use uuid::Uuid;
@@ -42,7 +42,7 @@ pub struct RestoreJob {
   partclone_cmd: Child,
   start: DateTime<UTC>,
   sent_first_msg: Cell<bool>,
-  pub rx: Receiver<PartcloneStatus>
+  partclone_status: Receiver<PartcloneStatus>
 }
 
 impl<'j> RestoreJob {
@@ -58,7 +58,7 @@ impl<'j> RestoreJob {
       })
     }
 
-    Ok(match self.rx.try_recv()? {
+    Ok(match self.partclone_status.try_recv()? {
       PartcloneStatus::Running { rate, estimated_finish, complete } => {
         RestoreStatus::Running {
           common: self.clone_status_common(),
@@ -129,7 +129,7 @@ impl<'j> RestoreJob {
     };
 
     let stderr = partclone_cmd.stderr.take().expect("!partclone.stderr");
-    let (tx, rx) = mpsc::channel();
+    let (tx, partclone_status) = mpsc::channel();
     thread::Builder::new()
       .name(format!("partclone-stderr-reader {}->{}", source, destination))
       .spawn(move|| {
@@ -143,7 +143,7 @@ impl<'j> RestoreJob {
       destination,
       cat_cmd: cat,
       partclone_cmd,
-      rx,
+      partclone_status,
       start: UTC::now(),
       sent_first_msg: Cell::new(false),
       id: Uuid::new_v4().to_string()

@@ -83,12 +83,12 @@ impl Server {
             },
             Some(CancelCloneRequest { id }) => if let Some(job) = self.clones.remove(&id) {
               let cancelled_msg = job.fail_status("Cancelled").to_yaml();
-              mem::drop(job);
+              mem::drop(job); // ensure actually cancelled before messaging
               self.zmq_send(&cancelled_msg)?;
             },
             Some(CancelRestoreRequest { id }) => if let Some(job) = self.restores.remove(&id) {
               let cancelled_msg = job.fail_status("Cancelled").to_yaml();
-              mem::drop(job);
+              mem::drop(job); // ensure actually cancelled before messaging
               self.zmq_send(&cancelled_msg)?;
             },
           };

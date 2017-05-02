@@ -168,7 +168,6 @@ pub fn status_yaml(status: &str, lsblk: Vec<JsonValue>) -> String {
 #[cfg(test)]
 mod tests {
   use super::*;
-  use chrono::prelude::*;
   use json;
   use yaml_rust::yaml::*;
 
