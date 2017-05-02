@@ -7,6 +7,7 @@ use restore::*;
 use outbound::*;
 use std::error::Error;
 use std::thread;
+use std::mem;
 use std::collections::HashMap;
 use std::time::Duration;
 use lsblk;
@@ -81,10 +82,14 @@ impl Server {
               }
             },
             Some(CancelCloneRequest { id }) => if let Some(job) = self.clones.remove(&id) {
-              self.zmq_send(&job.fail_status("Cancelled").to_yaml())?;
+              let cancelled_msg = job.fail_status("Cancelled").to_yaml();
+              mem::drop(job);
+              self.zmq_send(&cancelled_msg)?;
             },
             Some(CancelRestoreRequest { id }) => if let Some(job) = self.restores.remove(&id) {
-              self.zmq_send(&job.fail_status("Cancelled").to_yaml())?;
+              let cancelled_msg = job.fail_status("Cancelled").to_yaml();
+              mem::drop(job);
+              self.zmq_send(&cancelled_msg)?;
             },
           };
           true
