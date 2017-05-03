@@ -2,9 +2,11 @@ use chrono::prelude::*;
 use clone::*;
 use restore::*;
 use json::JsonValue;
+use std::io::{Result as IoResult, ErrorKind};
 use yaml_rust::yaml;
 use yaml_rust::yaml::Yaml;
 use yaml_rust::emitter::YamlEmitter;
+use server::DeleteResult;
 
 pub trait ToYaml {
   fn to_yaml(&self) -> String;
@@ -164,8 +166,22 @@ pub fn status_yaml(status: &str, lsblk: Vec<JsonValue>) -> String {
   yaml_str
 }
 
-pub fn deleted_clone_yaml(file: &str) -> String {
-  format!("type: deleted-clone\nfile: {}", file)
+impl ToYaml for DeleteResult {
+  fn to_yaml(&self) -> String {
+    match self {
+      &DeleteResult(ref file, Ok(_)) => format!("type: deleted-clone\n\
+                                                file: {}", file),
+      &DeleteResult(ref file, Err(ref err)) => {
+        let reason = match err.kind() {
+          ErrorKind::NotFound => "No such file".to_owned(),
+          _ => err.to_string()
+        };
+        format!("type: delete-clone-failed\n\
+                file: {}\n\
+                error: {}", file, reason)
+      }
+    }
+  }
 }
 
 

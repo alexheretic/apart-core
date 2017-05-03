@@ -105,6 +105,13 @@ A successful delete returns the response:
 type: deleted-clone
 file: /mnt/backups/work-2017-05-03T1020.apt.dd.gz
 ```
+Failure will return:
+```yaml
+# core -> client
+type: delete-clone-failed
+file: /mnt/backups/work-2017-05-03T1020.apt.dd.gz
+error: No such file
+```
 
 ### Restore
 Apart core can restore partitions using images it has previously created.

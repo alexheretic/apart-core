@@ -187,7 +187,7 @@ fn cancel_clone_job() {
 fn delete_image() {
   let core = CoreHandle::new().unwrap();
   let image = format!("{}/{}", core.tmp_dir(), "mockimg-2017-04-20T1500.apt.dd.gz");
-  assert!(Path::new(&image).exists());
+  assert!(Path::new(&image).exists()); // test setup sanity
 
   let clone_msg = format!("type: delete-clone\n\
                           file: {}", image);
@@ -195,4 +195,18 @@ fn delete_image() {
   let ref msg = core.expect_message_with(|msg| msg["type"].as_str() == Some("deleted-clone"));
   assert_eq!(msg["file"].as_str().unwrap(), image);
   assert!(!Path::new(&image).exists(), "image not actually deleted");
+}
+
+#[test]
+fn delete_image_not_found() {
+  let core = CoreHandle::new().unwrap();
+  let image = format!("{}/{}", core.tmp_dir(), "not-here-2017-04-20T1500.apt.dd.gz");
+  assert!(!Path::new(&image).exists()); // test setup sanity
+
+  let clone_msg = format!("type: delete-clone\n\
+                          file: {}", image);
+  core.send(&clone_msg);
+  let ref msg = core.expect_message_with(|msg| msg["type"].as_str() == Some("delete-clone-failed"));
+  assert_eq!(msg["file"].as_str().unwrap(), image);
+  assert_eq!(msg["error"].as_str(), Some("No such file"));
 }

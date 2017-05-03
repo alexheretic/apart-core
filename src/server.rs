@@ -15,12 +15,14 @@ use std::sync::mpsc::{Sender, Receiver, channel};
 use std::io::{Result as IoResult};
 use lsblk;
 
+pub struct DeleteResult(pub String, pub IoResult<()>);
+
 pub struct Server {
   socket: zmq::Socket,
   clones: HashMap<String, CloneJob>,
   restores: HashMap<String, RestoreJob>,
-  io_receiver: Receiver<IoResult<String>>,
-  io_master_sender: Sender<IoResult<String>>
+  io_receiver: Receiver<DeleteResult>,
+  io_master_sender: Sender<DeleteResult>
 }
 
 impl Drop for Server {
@@ -101,8 +103,12 @@ impl Server {
             Some(DeleteImageRequest { file }) => {
               if clone::is_valid_image_name(&file) {
                 let tx = self.io_master_sender.clone();
-                thread::spawn(move|| if let Err(err) = tx.send(fs::remove_file(&file).map(|_| file)) {
-                  debug!("Could not send, shutting down?: {}", err);
+                thread::spawn(move|| {
+                  thread::sleep_ms(5000); // TODO remove
+                  let rm_result = fs::remove_file(&file);
+                  if let Err(err) = tx.send(DeleteResult(file, rm_result)) {
+                    debug!("Could not send, shutting down?: {}", err);
+                  }
                 });
               }
               else { warn!("Invalid image file for deletion: {}", file); }
@@ -155,10 +161,7 @@ impl Server {
       }
 
       if let Ok(result) = self.io_receiver.try_recv() {
-        match result {
-          Ok(file) => self.zmq_send(&deleted_clone_yaml(&file))?,
-          Err(err) => error!("Deleting failed: {}", err)
-        }
+        self.zmq_send(&result.to_yaml())?;
         did_work = true
       }
 

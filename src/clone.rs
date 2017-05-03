@@ -136,7 +136,7 @@ impl CloneJob {
       Some(fstype) => match partclone::cmd(&fstype) {
         Ok(cmd) => (fstype, cmd),
         Err(_) => {
-          warn!("No partclone command found for fstype '{}', using dd...", fstype);
+          info!("No partclone command found for fstype '{}', using dd...", fstype);
           ("dd".to_owned(), partclone::cmd("dd")?)
         }
       },
