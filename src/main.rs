@@ -24,7 +24,9 @@ fn main() {
   match std::env::args().take(2).last() {
     Some(arg) => {
       if arg.starts_with("ipc://") {
-        Server::start_at(&arg).expect("Server failed");
+        if let Err(err) = Server::start_at(&arg) {
+          error!("Core failed: {}", err);
+        }
       }
       else {
         print_help();

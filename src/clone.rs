@@ -235,6 +235,10 @@ pub fn partclone_variant_from_image(filename: &str) -> Result<String, Box<Error>
   Err(Box::new(OutputInvalidError(format!("Invalid image file: {}", filename))))
 }
 
+pub fn is_valid_image_name(filename: &str) -> bool {
+  partclone_variant_from_image(filename).is_ok()
+}
+
 #[cfg(test)]
 mod tests {
   use super::*;
@@ -249,5 +253,15 @@ mod tests {
   fn dd_variant_from_image() {
     assert_eq!(partclone_variant_from_image("/mnt/backups/mockimg-2017-04-20T1500.apt.dd.gz").unwrap(),
       "dd".to_owned());
+  }
+
+  #[test]
+  fn image_valid() {
+    assert_eq!(is_valid_image_name("/mnt/backups/mockimg-2017-04-20T1500.apt.dd.gz"), true);
+  }
+
+  #[test]
+  fn image_invalid() {
+    assert_eq!(is_valid_image_name("/mnt/backups/mockimg-2017-04-20T1500.gz"), false);
   }
 }

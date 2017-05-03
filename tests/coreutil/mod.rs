@@ -166,7 +166,7 @@ impl CoreHandle {
     let mut file = fs::OpenOptions::new()
       .write(true)
       .create(true)
-      .open(self.path_of(&format!(".control.mockpcl.{}", variant))?)?;
+      .open(self.path_of(&format!(".control.mockpcl.{}", variant)))?;
     write!(file, "complete={:.2}\nrate={}", complete * 100., rate)?;
     Ok(())
   }
@@ -191,11 +191,11 @@ impl CoreHandle {
   }
 
   /// no error if absent
-  pub fn path_of(&self, filename: &str) -> Result<PathBuf> {
+  pub fn path_of(&self, filename: &str) -> PathBuf {
     let file = self.tmp_dir.dir.to_owned() + "/" + filename;
     let mut path = PathBuf::new();
     path.push(&file);
-    Ok(path)
+    path
   }
 
   pub fn tmp_dir(&self) -> &str {

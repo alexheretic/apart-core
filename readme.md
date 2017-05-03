@@ -63,7 +63,7 @@ Client will then receive regular update messages on the progress of the clone jo
 # core -> client
 type: clone
 source: /dev/sda1  # requested partition
-destination: /mnt/backups/work.apt.gz  # backup image file absolute path
+destination: /mnt/backups/work-2017-05-03T1020.apt.dd.gz  # backup image file absolute path
 id: 8db93abe  # a uid for this job
 complete: 0.0123  # double [0, 1] where 1.0 => it is complete
 start: 2017-04-18T17:39:01Z  # utc time of start
@@ -87,11 +87,23 @@ In the case an error has occurred, ie it's been cancelled, a `type: clone-failed
 # core -> client
 type: clone-failed
 source: /dev/sda1
-destination: /mnt/backups/work.apt.gz
+destination: /mnt/backups/work-2017-05-03T1020.apt.dd.gz
 id: 8db93abe
 start: 2017-04-18T17:39:01Z
 finish: 2017-04-18T17:39:03Z  # utc time of failure
 error: Cancelled  # a reason for the failure
+```
+Successfully created images can be deleted by sending:
+```yaml
+# client -> core
+type: delete-clone
+file: /mnt/backups/work-2017-05-03T1020.apt.dd.gz
+```
+A successful delete returns the response:
+```yaml
+# core -> client
+type: deleted-clone
+file: /mnt/backups/work-2017-05-03T1020.apt.dd.gz
 ```
 
 ### Restore

@@ -49,7 +49,7 @@ fn do_clone_job() {
   assert!(!core.tmp_file_contents_is_1(".latest.c.mockpcl.dd.txt"),
     "partclone.dd invoked with '-c'");
 
-  assert!(!core.path_of(&format!("{}/{}", core.tmp_dir(), expected_filename)).unwrap().exists());
+  assert!(!core.path_of(&format!("{}/{}", core.tmp_dir(), expected_filename)).exists());
 
   core.set_mock_partclone("dd", MockPartcloneState{ complete: 0.5634, rate: "0.01GB/min".to_owned() })
     .expect("!set_mock_partclone");
@@ -69,7 +69,7 @@ fn do_clone_job() {
   assert_eq!(msg["start"].as_str(), start);
   assert_eq!(msg["finish"].as_str(), None);
 
-  assert!(!core.path_of(&format!("{}/{}", core.tmp_dir(), expected_filename)).unwrap().exists());
+  assert!(!core.path_of(&format!("{}/{}", core.tmp_dir(), expected_filename)).exists());
 
   core.set_mock_partclone("dd", MockPartcloneState{ complete: 1.0, rate: "12.23GB/min".to_owned() })
     .expect("!set_mock_partclone");
@@ -181,4 +181,18 @@ fn cancel_clone_job() {
   }
 
   assert!(!core.tmp_file_contents_is_1(".latest.finished.mockpcl.dd.txt"), "partclone not killed");
+}
+
+#[test]
+fn delete_image() {
+  let core = CoreHandle::new().unwrap();
+  let image = format!("{}/{}", core.tmp_dir(), "mockimg-2017-04-20T1500.apt.dd.gz");
+  assert!(Path::new(&image).exists());
+
+  let clone_msg = format!("type: delete-clone\n\
+                          file: {}", image);
+  core.send(&clone_msg);
+  let ref msg = core.expect_message_with(|msg| msg["type"].as_str() == Some("deleted-clone"));
+  assert_eq!(msg["file"].as_str().unwrap(), image);
+  assert!(!Path::new(&image).exists(), "image not actually deleted");
 }

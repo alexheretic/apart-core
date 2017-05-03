@@ -164,6 +164,10 @@ pub fn status_yaml(status: &str, lsblk: Vec<JsonValue>) -> String {
   yaml_str
 }
 
+pub fn deleted_clone_yaml(file: &str) -> String {
+  format!("type: deleted-clone\nfile: {}", file)
+}
+
 
 #[cfg(test)]
 mod tests {

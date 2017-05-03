@@ -10,49 +10,47 @@ pub enum Request {
   CancelCloneRequest { id: String },
 
   RestoreRequest { source: String, destination: String },
-  CancelRestoreRequest { id: String }
+  CancelRestoreRequest { id: String },
+
+  DeleteImageRequest { file: String }
 }
 
 impl Request {
   /// Parses a yaml string to a Request struct, all errors -> None
   pub fn parse(yaml: &str) -> Option<Request> {
-    match YamlLoader::load_from_str(yaml) {
-      Ok(docs) => match docs[0]["type"].as_str() {
-        Some("status-request") => Some(StatusRequest),
-        Some("kill-request") => Some(KillRequest),
-        Some("clone") => {
-          let msg = &docs[0];
-          match (msg["source"].as_str(), msg["destination"].as_str(), msg["name"].as_str()) {
-            (Some(s), Some(d), Some(n)) => Some(CloneRequest {
-              source: s.to_owned(),
-              destination: d.to_owned(),
-              name: n.to_owned()
-            }),
-            _ => None
-          }
-        },
-        Some("restore") => {
-          let msg = &docs[0];
-          match (msg["source"].as_str(), msg["destination"].as_str()) {
-            (Some(s), Some(d)) => Some(RestoreRequest {
-              source: s.to_owned(),
-              destination: d.to_owned()
-            }),
-            _ => None
-          }
-        },
-        Some("cancel-clone") => match docs[0]["id"].as_str() {
-          Some(id) => Some(CancelCloneRequest{ id: id.to_owned() }),
-          _ => None
-        },
-        Some("cancel-restore") => match docs[0]["id"].as_str() {
-          Some(id) => Some(CancelRestoreRequest{ id: id.to_owned() }),
-          _ => None
-        },
-        _ => None
-      },
-      _ => None
+    if let Ok(docs) = YamlLoader::load_from_str(yaml) {
+      if let Some(msg) = docs.into_iter().next() {
+        let msg_type = msg["type"].as_str();
+        if let Some("status-request") = msg_type {
+          return Some(StatusRequest)
+        }
+        if let Some("kill-request") = msg_type {
+          return Some(KillRequest)
+        }
+        if let (Some("clone"), Some(source), Some(dest), Some(name)) =
+            (msg_type, msg["source"].as_str(), msg["destination"].as_str(), msg["name"].as_str()) {
+          return Some(CloneRequest {
+            source: source.to_owned(),
+            destination: dest.to_owned(),
+            name: name.to_owned()
+          })
+        }
+        if let (Some("restore"), Some(source), Some(dest)) =
+            (msg_type, msg["source"].as_str(), msg["destination"].as_str()) {
+          return Some(RestoreRequest { source: source.to_owned(), destination: dest.to_owned() })
+        }
+        if let (Some("cancel-clone"), Some(id)) = (msg_type, msg["id"].as_str()) {
+          return Some(CancelCloneRequest{ id: id.to_owned() })
+        }
+        if let (Some("cancel-restore"), Some(id)) = (msg_type, msg["id"].as_str()) {
+          return Some(CancelRestoreRequest{ id: id.to_owned() })
+        }
+        if let (Some("delete-clone"), Some(file)) = (msg_type, msg["file"].as_str()) {
+          return Some(DeleteImageRequest{ file: file.to_owned() })
+        }
+      }
     }
+    None
   }
 }
 
@@ -68,7 +66,12 @@ mod tests {
 
   #[test]
   fn parse_kill_request() {
-    assert_eq!(Request::parse("type: kill-request"), Some(KillRequest));
+    assert_eq!(Request::parse("type: kill-request"), Some(KillRequest))
+  }
+
+  #[test]
+  fn parse_empty() {
+    assert_eq!(Request::parse(""), None)
   }
 
   #[test]
