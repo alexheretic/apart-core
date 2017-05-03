@@ -104,7 +104,6 @@ impl Server {
               if clone::is_valid_image_name(&file) {
                 let tx = self.io_master_sender.clone();
                 thread::spawn(move|| {
-                  thread::sleep_ms(5000); // TODO remove
                   let rm_result = fs::remove_file(&file);
                   if let Err(err) = tx.send(DeleteResult(file, rm_result)) {
                     debug!("Could not send, shutting down?: {}", err);
