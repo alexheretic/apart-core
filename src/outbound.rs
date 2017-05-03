@@ -59,14 +59,13 @@ impl ToYaml for CloneStatus {
                 common_yaml = common.to_yaml(), complete = complete_yaml_str(complete), rate = rate,
                 finish = estimated_finish)
       },
-      &CloneStatus::Finished { ref finish, ref rate, ref common, image_size } => {
+      &CloneStatus::Finished { ref finish, ref common, image_size } => {
         format!("type: clone\n\
                 {common_yaml}\n\
                 complete: 1.0\n\
-                rate: \"{rate}\"\n\
                 finish: {finish:?}\n\
                 image_size: {image_size}",
-                common_yaml = common.to_yaml(), rate = rate, finish = finish,
+                common_yaml = common.to_yaml(), finish = finish,
                 image_size = image_size)
       },
       &CloneStatus::Failed { ref finish, ref common, ref reason } => {
@@ -295,13 +294,11 @@ mod tests {
         id: "some-id".to_owned()
       },
       finish: UTC.ymd(2017, 4, 18).and_hms(15, 45, 34),
-      image_size: 123123,
-      rate: "1GB/s".to_owned() }.to_yaml();
+      image_size: 123123 }.to_yaml();
     let yaml = YamlLoader::load_from_str(&yaml_str).unwrap().remove(0);
     assert_eq!(yaml["type"].as_str(), Some("clone"));
     assert_eq!(yaml["complete"].as_f64(), Some(1.0));
     assert_eq!(yaml["id"].as_str(), Some("some-id"));
-    assert_eq!(yaml["rate"].as_str(), Some("1GB/s"));
     assert_eq!(yaml["start"].as_str(), Some("2017-04-18T15:44:12Z"));
     assert_eq!(yaml["finish"].as_str(), Some("2017-04-18T15:45:34Z"));
     assert_eq!(yaml["source"].as_str(), Some("/dev/ars3"));

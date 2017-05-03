@@ -10,7 +10,7 @@ use std::sync::{mpsc};
 use std::sync::mpsc::{Receiver};
 use std::os::unix::io::{FromRawFd, IntoRawFd, RawFd};
 use std::fs::File;
-use std::cell::{RefCell, Cell};
+use std::cell::{Cell};
 use uuid::Uuid;
 use std::error::Error;
 use lsblk;
@@ -34,7 +34,7 @@ pub enum CloneStatus {
     rate: Option<String>,
     estimated_finish: Option<DateTime<UTC>>
   },
-  Finished { common: CloneStatusCommon, rate: String, finish: DateTime<UTC>, image_size: u64 },
+  Finished { common: CloneStatusCommon, finish: DateTime<UTC>, image_size: u64 },
   Failed { common: CloneStatusCommon, reason: String, finish: DateTime<UTC> }
 }
 
@@ -45,7 +45,6 @@ pub struct CloneJob {
   id: Uuid,
   partclone_cmd: Child,
   start: DateTime<UTC>,
-  last_rate: RefCell<Option<String>>,
   sent_first_msg: Cell<bool>,
   partclone_status: Receiver<PartcloneStatus>
 }
@@ -77,7 +76,6 @@ impl CloneJob {
 
     Ok(match self.partclone_status.try_recv()? {
       PartcloneStatus::Running { rate, estimated_finish, complete } => {
-        *self.last_rate.try_borrow_mut()? = Some(rate.clone());
         CloneStatus::Running {
           common: self.clone_status_common(),
           complete,
@@ -87,10 +85,8 @@ impl CloneJob {
       },
       PartcloneStatus::Synced { finish } => {
         let meta = fs::metadata(&self.destination)?;
-        let last_rate = self.last_rate.borrow().clone();
         CloneStatus::Finished {
           common: self.clone_status_common(),
-          rate: last_rate.unwrap_or("?".to_owned()),
           finish,
           image_size: meta.len()
         }
@@ -185,7 +181,6 @@ impl CloneJob {
       partclone_status,
       start: UTC::now(),
       id: Uuid::new_v4(),
-      last_rate: RefCell::new(None),
       sent_first_msg: Cell::new(false)
     })
   }

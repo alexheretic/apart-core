@@ -167,7 +167,7 @@ impl CoreHandle {
       .write(true)
       .create(true)
       .open(self.path_of(&format!(".control.mockpcl.{}", variant)))?;
-    write!(file, "complete={:.2}\nrate={}", complete * 100., rate)?;
+    write!(file, "complete={:.2}\nrate=\"{}\"", complete * 100., rate)?;
     Ok(())
   }
 

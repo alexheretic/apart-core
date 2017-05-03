@@ -29,7 +29,7 @@ impl Error for OutputInvalidError {
 }
 
 pub fn cmd(variant: &str) -> Result<String, IoError> {
-  let partclone_cmd = env::var("APART_PARTCLONE_CMD").unwrap_or("partclone".to_owned());
+  let partclone_cmd = env::var("APART_PARTCLONE_CMD").unwrap_or("/usr/bin/partclone".to_owned());
   let partclone_dd = format!("{}.{}", partclone_cmd, variant);
   let cmd_path = Path::new(&partclone_dd);
   if !cmd_path.exists() {
@@ -41,7 +41,7 @@ pub fn cmd(variant: &str) -> Result<String, IoError> {
 pub fn read_output(stderr: ChildStderr, tx: Sender<PartcloneStatus>)
                          -> Result<(), Box<Error>> {
   let progress_re = Regex::new(
-    r"Remaining:\s*(\d{2,}:\d{2}:\d{2}), Completed:\s*(\d{1,3}\.?\d?\d?)%,\s*([^,]+)").unwrap();
+    r"Remaining:\s*(\d{2,}:\d{2}:\d{2}), Completed:\s*(\d{1,3}\.?\d?\d?)%,\s*R?a?t?e?:?\s*([0-9][^,]+)").unwrap();
 
   let (mut started_main_output, mut synced) = (false, false);
   let duration_re = Regex::new(r"^(\d{2,}):(\d{2}):(\d{2})$").unwrap();
@@ -71,6 +71,9 @@ pub fn read_output(stderr: ChildStderr, tx: Sender<PartcloneStatus>)
               }
 
               let rate = cap[3].to_owned();
+              debug!("Partclone output: complete: {}, finish: {}, rate: {}",
+                complete, estimated_finish, rate);
+
               if let Err(err) = tx.send(PartcloneStatus::Running { estimated_finish, rate, complete }) {
                 // this can be expected if, for example, the job is cancelled
                 debug!("Could not send, job dropped?: {}", err);

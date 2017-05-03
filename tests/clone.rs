@@ -75,7 +75,6 @@ fn do_clone_job() {
     .expect("!set_mock_partclone");
   let ref msg = core.expect_message_with(|msg| msg["complete"].as_f64() == Some(1.0));
   assert_eq!(msg["id"].as_str(), id);
-  assert_eq!(msg["rate"].as_str(), Some("12.23GB/min"));
   assert_eq!(msg["start"].as_str(), start);
   assert!(msg["finish"].as_str().is_some(), "missing clone.finish");
   assert!(msg["image_size"].as_i64().is_some(), "missing clone.image_size");
@@ -138,6 +137,26 @@ fn clone_using_partclone_fstype_variant_ext2() {
     "partclone.ext2 not invoked with '-c'");
   assert!(core.tmp_file_contents_is_1(".latest.finished.mockpcl.ext2.txt"),
     "partclone didn't finish");
+}
+
+#[test]
+fn handle_partclone_rate_output() {
+  let core = CoreHandle::new().unwrap();
+
+  let clone_msg = format!("type: clone\n\
+                          source: /dev/sdb1\n\
+                          destination: {destination}\n\
+                          name: weird_rate_job", destination = core.tmp_dir());
+  core.send(&clone_msg);
+  core.set_mock_partclone("ext2", MockPartcloneState{complete: 0.5, rate: "1.23GB/min".to_owned()})
+    .expect("!set_mock_partclone");
+  let ref msg = core.expect_message_with(|msg| msg["complete"].as_f64() == Some(0.5));
+  assert_eq!(msg["rate"].as_str(), Some("1.23GB/min"));
+  // Partclone can output the rate with and without the 'Rate: ' prefix
+  core.set_mock_partclone("ext2", MockPartcloneState{complete: 0.6, rate: "Rate: 2.34GB/min".to_owned()})
+    .expect("!set_mock_partclone");
+  let ref msg = core.expect_message_with(|msg| msg["complete"].as_f64() != Some(0.5));
+  assert_eq!(msg["rate"].as_str(), Some("2.34GB/min"));
 }
 
 #[test]
