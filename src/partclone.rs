@@ -49,6 +49,7 @@ pub fn read_output(stderr: ChildStderr, tx: Sender<PartcloneStatus>)
   'read: for line in BufReader::new(stderr).lines() {
     match line {
       Ok(out) => {
+        debug!("partclone: {}", out);
         if started_main_output {
           if !synced {
             for cap in progress_re.captures_iter(&out) {

@@ -4,6 +4,7 @@ use std::time::Duration;
 
 /// Handle a child process no longer desired running
 pub fn drop_log_errors(cmd: &mut Child, log_name: &str) {
+  debug!("drop_log_errors(cmd, {})", log_name);
   match cmd.wait_timeout(Duration::from_secs(0)) {
     Ok(out) => {
       match out {

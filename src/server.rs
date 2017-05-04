@@ -7,12 +7,11 @@ use clone::{CloneJob, CloneStatus};
 use restore::*;
 use outbound::*;
 use std::error::Error;
-use std::thread;
-use std::mem;
+use std::{thread, mem, fs};
 use std::collections::HashMap;
-use std::fs;
 use std::sync::mpsc::{Sender, Receiver, channel};
 use std::io::{Result as IoResult};
+use std::marker::Send;
 use lsblk;
 
 pub struct DeleteResult(pub String, pub IoResult<()>);
@@ -21,8 +20,8 @@ pub struct Server {
   socket: zmq::Socket,
   clones: HashMap<String, CloneJob>,
   restores: HashMap<String, RestoreJob>,
-  io_receiver: Receiver<DeleteResult>,
-  io_master_sender: Sender<DeleteResult>
+  io_receiver: Receiver<Box<ToYaml + Send>>,
+  io_master_sender: Sender<Box<ToYaml + Send>>
 }
 
 impl Drop for Server {
@@ -44,7 +43,7 @@ impl Server {
 
     let (io_master_sender, io_receiver) = channel();
     let mut server = Server {
-      socket,
+      socket: socket,
       clones: HashMap::new(),
       restores: HashMap::new(),
       io_receiver,
@@ -91,9 +90,15 @@ impl Server {
               }
             },
             Some(CancelCloneRequest { id }) => if let Some(job) = self.clones.remove(&id) {
-              let cancelled_msg = job.fail_status("Cancelled").to_yaml();
-              mem::drop(job); // ensure actually cancelled before messaging
-              self.zmq_send(&cancelled_msg)?;
+              // cancel clone concurrently as removing .inprogress image can be slow
+              let tx = self.io_master_sender.clone();
+              thread::spawn(move|| {
+                let cancelled_msg = job.fail_status("Cancelled");
+                mem::drop(job); // ensure actually cancelled before messaging
+                if let Err(err) = tx.send(Box::new(cancelled_msg)) {
+                  debug!("Could not send, shutting down?: {}", err);
+                }
+              });
             },
             Some(CancelRestoreRequest { id }) => if let Some(job) = self.restores.remove(&id) {
               let cancelled_msg = job.fail_status("Cancelled").to_yaml();
@@ -105,7 +110,7 @@ impl Server {
                 let tx = self.io_master_sender.clone();
                 thread::spawn(move|| {
                   let rm_result = fs::remove_file(&file);
-                  if let Err(err) = tx.send(DeleteResult(file, rm_result)) {
+                  if let Err(err) = tx.send(Box::new(DeleteResult(file, rm_result))) {
                     debug!("Could not send, shutting down?: {}", err);
                   }
                 });

@@ -8,7 +8,7 @@ use std::time::Duration;
 use std::io::{ErrorKind, Error as IoError, Result as IoResult};
 use std::sync::{mpsc};
 use std::sync::mpsc::{Receiver};
-use std::os::unix::io::{FromRawFd, IntoRawFd, RawFd, AsRawFd};
+use std::os::unix::io::{FromRawFd, IntoRawFd, RawFd};
 use std::fs::File;
 use std::cell::{Cell};
 use uuid::Uuid;
@@ -156,7 +156,7 @@ impl CloneJob {
     };
 
     let compress_cmd = Command::new("pigz").arg("-1c")
-      .stdin(unsafe { Stdio::from_raw_fd(partclone_cmd.stdout.as_mut().unwrap().as_raw_fd()) })
+      .stdin(unsafe { Stdio::from_raw_fd(partclone_cmd.stdout.take().unwrap().into_raw_fd()) })
       .stdout(unsafe { Stdio::from_raw_fd(dest_raw_fd) })
       .stderr(Stdio::null())
       .spawn()?;

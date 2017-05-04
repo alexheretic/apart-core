@@ -3,7 +3,7 @@ use std::{thread, str, fmt};
 use std::process::{Command, Child, Stdio};
 use std::sync::{mpsc};
 use std::sync::mpsc::{Receiver};
-use std::os::unix::io::{FromRawFd, AsRawFd};
+use std::os::unix::io::{FromRawFd, IntoRawFd};
 use uuid::Uuid;
 use partclone;
 use partclone::*;
@@ -108,7 +108,7 @@ impl<'j> RestoreJob {
 
     let mut pigz = Command::new("pigz").arg("-dc")
       .stdout(Stdio::piped())
-      .stdin(unsafe { Stdio::from_raw_fd(cat.stdout.as_mut().expect("!cat.stdout").as_raw_fd()) })
+      .stdin(unsafe { Stdio::from_raw_fd(cat.stdout.take().expect("!cat.stdout").into_raw_fd()) })
       .stderr(Stdio::null())
       .spawn()?;
 
@@ -123,7 +123,7 @@ impl<'j> RestoreJob {
       Command::new(partclone_cmd)
       .args(&args)
       .stdout(Stdio::null())
-      .stdin(unsafe { Stdio::from_raw_fd(pigz.stdout.as_mut().expect("!pigz.stdout").as_raw_fd()) })
+      .stdin(unsafe { Stdio::from_raw_fd(pigz.stdout.take().expect("!pigz.stdout").into_raw_fd()) })
       .stderr(Stdio::piped())
       .spawn()?
     };
