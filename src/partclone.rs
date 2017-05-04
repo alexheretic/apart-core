@@ -65,12 +65,7 @@ pub fn read_output(stderr: ChildStderr, tx: Sender<PartcloneStatus>)
               let estimated_finish = estimated_finish
                 .ok_or(OutputInvalidError("!estimated_finish".to_owned()))?;
 
-              let mut complete = cap[2].parse::<f64>()? / 100.0;
-              if complete == 1.0 {
-                // only 100% when synced
-                complete = 0.9999;
-              }
-
+              let complete = cap[2].parse::<f64>()? / 100.0;
               let rate = cap[3].to_owned();
               debug!("Partclone output: complete: {}, finish: {}, rate: {}",
                 complete, estimated_finish, rate);

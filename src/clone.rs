@@ -80,7 +80,7 @@ impl CloneJob {
       PartcloneStatus::Running { rate, estimated_finish, complete } => {
         CloneStatus::Running {
           common: self.clone_status_common(),
-          complete,
+          complete: if complete == 1.0 { 0.9999 } else { complete },
           rate: Some(rate),
           estimated_finish: Some(estimated_finish)
         }

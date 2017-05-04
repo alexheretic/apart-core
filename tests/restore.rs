@@ -48,6 +48,7 @@ fn restore_success() {
 
   assert_eq!(msg["id"].as_str(), id);
   assert_eq!(msg["rate"].as_str(), Some("0.01GB/min"));
+  assert_eq!(msg["syncing"].as_bool(), Some(false));
 
   let estimated_finish = msg["estimated_finish"].as_str().expect("missing estimated_finish");
   let estimated_finish_time: DateTime<UTC> = estimated_finish.parse().expect("!parse estimated_finish");
@@ -61,6 +62,11 @@ fn restore_success() {
 
   core.set_mock_partclone("dd", MockPartcloneState{ complete: 1.0, rate: "12.23GB/min".to_owned() })
     .expect("!set_mock_partclone");
+
+  // should get some message just before finish notifying syncing status
+  core.expect_message_with(|msg|
+    msg["complete"].as_f64() != Some(1.0) && msg["syncing"].as_bool() == Some(true));
+
   let ref msg = core.expect_message_with(|msg| msg["complete"].as_f64() == Some(1.0));
   assert_eq!(msg["id"].as_str(), id);
   // assert_eq!(msg["rate"].as_str(), Some("12.23GB/min"));

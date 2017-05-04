@@ -82,17 +82,18 @@ impl ToYaml for CloneStatus {
 impl<'a> ToYaml for RestoreStatus<'a> {
   fn to_yaml(&self) -> String {
     match self {
-      &RestoreStatus::Running { ref common, complete, ref rate, estimated_finish } => {
+      &RestoreStatus::Running { ref common, complete, syncing, ref rate, estimated_finish } => {
         let estimated_finish = estimated_finish
           .map_or_else(|| "~".to_owned(), |d| format!("{:?}", d));
         let rate = rate.clone().unwrap_or_else(|| "~".to_owned());
         format!("type: restore\n\
                 {common_yaml}\n\
                 complete: {complete}\n\
+                syncing: {syncing}\n\
                 rate: {rate}\n\
                 estimated_finish: {finish}",
                 common_yaml = common.to_yaml(), complete = complete_yaml_str(complete), rate = rate,
-                finish = estimated_finish)
+                finish = estimated_finish, syncing = syncing)
       },
       &RestoreStatus::Finished { ref common, finish } => {
         format!("type: restore\n\
@@ -254,10 +255,15 @@ mod tests {
       },
       estimated_finish: Some(UTC.ymd(2017, 4, 18).and_hms(15, 45, 00)),
       complete: 0.123,
+      syncing: false,
       rate: Some("1GB/s".to_owned()) }.to_yaml();
+
+    println!("{}", yaml_str);
+
     let yaml = YamlLoader::load_from_str(&yaml_str).unwrap().remove(0);
     assert_eq!(yaml["type"].as_str(), Some("restore"));
     assert_eq!(yaml["complete"].as_f64(), Some(0.123));
+    assert_eq!(yaml["syncing"].as_bool(), Some(false));
     assert_eq!(yaml["id"].as_str(), Some("some-id"));
     assert_eq!(yaml["rate"].as_str(), Some("1GB/s"));
     assert_eq!(yaml["start"].as_str(), Some("2017-04-18T15:44:12Z"));

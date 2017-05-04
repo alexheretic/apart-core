@@ -25,6 +25,7 @@ pub enum RestoreStatus<'a> {
   Running {
     common: RestoreStatusCommon<'a>,
     complete: f64,
+    syncing: bool,
     rate: Option<String>,
     estimated_finish: Option<DateTime<UTC>>
   },
@@ -53,6 +54,7 @@ impl<'j> RestoreJob {
       return Ok(RestoreStatus::Running {
         common: self.clone_status_common(),
         complete: 0.0,
+        syncing: false,
         rate: None,
         estimated_finish: None
       })
@@ -62,7 +64,8 @@ impl<'j> RestoreJob {
       PartcloneStatus::Running { rate, estimated_finish, complete } => {
         RestoreStatus::Running {
           common: self.clone_status_common(),
-          complete,
+          complete: if complete == 1.0 { 0.9999 } else { complete },
+          syncing: complete == 1.0,
           rate: Some(rate),
           estimated_finish: Some(estimated_finish)
         }
