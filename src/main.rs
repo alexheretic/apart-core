@@ -15,6 +15,7 @@ mod partclone;
 mod clone;
 mod restore;
 mod lsblk;
+mod child;
 
 use server::Server;
 

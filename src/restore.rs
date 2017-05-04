@@ -1,17 +1,16 @@
 use chrono::prelude::*;
 use std::{thread, str, fmt};
 use std::process::{Command, Child, Stdio};
-use wait_timeout::ChildExt;
-use std::time::Duration;
 use std::sync::{mpsc};
 use std::sync::mpsc::{Receiver};
-use std::os::unix::io::{FromRawFd, IntoRawFd};
+use std::os::unix::io::{FromRawFd, AsRawFd};
 use uuid::Uuid;
 use partclone;
 use partclone::*;
 use std::error::Error;
 use std::cell::{Cell};
 use clone::partclone_variant_from_image;
+use child;
 
 #[derive(Debug)]
 pub struct RestoreStatusCommon<'a> {
@@ -39,6 +38,7 @@ pub struct RestoreJob {
   destination: String,
   id: String,
   cat_cmd: Child,
+  compress_cmd: Child,
   partclone_cmd: Child,
   start: DateTime<UTC>,
   sent_first_msg: Cell<bool>,
@@ -108,7 +108,7 @@ impl<'j> RestoreJob {
 
     let mut pigz = Command::new("pigz").arg("-dc")
       .stdout(Stdio::piped())
-      .stdin(unsafe { Stdio::from_raw_fd(cat.stdout.take().expect("!cat.stdout").into_raw_fd()) })
+      .stdin(unsafe { Stdio::from_raw_fd(cat.stdout.as_mut().expect("!cat.stdout").as_raw_fd()) })
       .stderr(Stdio::null())
       .spawn()?;
 
@@ -123,7 +123,7 @@ impl<'j> RestoreJob {
       Command::new(partclone_cmd)
       .args(&args)
       .stdout(Stdio::null())
-      .stdin(unsafe { Stdio::from_raw_fd(pigz.stdout.take().expect("!pigz.stdout").into_raw_fd()) })
+      .stdin(unsafe { Stdio::from_raw_fd(pigz.stdout.as_mut().expect("!pigz.stdout").as_raw_fd()) })
       .stderr(Stdio::piped())
       .spawn()?
     };
@@ -142,6 +142,7 @@ impl<'j> RestoreJob {
       source,
       destination,
       cat_cmd: cat,
+      compress_cmd: pigz,
       partclone_cmd,
       partclone_status,
       start: UTC::now(),
@@ -161,35 +162,8 @@ impl fmt::Display for RestoreJob {
 
 impl Drop for RestoreJob {
   fn drop(&mut self) {
-    match self.partclone_cmd.wait_timeout(Duration::from_secs(0)) {
-      Ok(None) => {
-        if let Err(x) = self.partclone_cmd.kill() {
-          error!("Failed to kill RestoreJob#partclone_cmd: {}", x);
-        }
-      },
-      Ok(Some(status)) => {
-        if !status.success() {
-          warn!("RestoreJob#partclone_cmd finished with != 0 exit");
-        }
-      },
-      Err(x) => {
-        error!("Failed to drop RestoreJob: {}", x);
-      }
-    }
-    match self.cat_cmd.wait_timeout(Duration::from_secs(0)) {
-      Ok(None) => {
-        if let Err(x) = self.partclone_cmd.kill() {
-          error!("Failed to kill RestoreJob#cat_cmd: {}", x);
-        }
-      },
-      Ok(Some(status)) => {
-        if !status.success() {
-          warn!("RestoreJob#cat_cmd finished with != 0 exit");
-        }
-      },
-      Err(x) => {
-        error!("Failed to drop RestoreJob: {}", x);
-      }
-    }
+    child::drop_log_errors(&mut self.cat_cmd, "RestoreJob#cat_cmd");
+    child::drop_log_errors(&mut self.compress_cmd, "RestoreJob#compress_cmd");
+    child::drop_log_errors(&mut self.partclone_cmd, "RestoreJob#partclone_cmd");
   }
 }

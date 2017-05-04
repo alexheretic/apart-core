@@ -2,7 +2,7 @@ use chrono::prelude::*;
 use clone::*;
 use restore::*;
 use json::JsonValue;
-use std::io::{Result as IoResult, ErrorKind};
+use std::io::{ErrorKind};
 use yaml_rust::yaml;
 use yaml_rust::yaml::Yaml;
 use yaml_rust::emitter::YamlEmitter;

@@ -8,7 +8,7 @@ use std::time::Duration;
 use std::io::{ErrorKind, Error as IoError, Result as IoResult};
 use std::sync::{mpsc};
 use std::sync::mpsc::{Receiver};
-use std::os::unix::io::{FromRawFd, IntoRawFd, RawFd};
+use std::os::unix::io::{FromRawFd, IntoRawFd, RawFd, AsRawFd};
 use std::fs::File;
 use std::cell::{Cell};
 use uuid::Uuid;
@@ -16,6 +16,7 @@ use std::error::Error;
 use lsblk;
 use partclone;
 use partclone::*;
+use child;
 
 #[derive(Clone, PartialEq, Debug)]
 pub struct CloneStatusCommon {
@@ -44,6 +45,7 @@ pub struct CloneJob {
   destination: String,
   id: Uuid,
   partclone_cmd: Child,
+  compress_cmd: Child,
   start: DateTime<UTC>,
   sent_first_msg: Cell<bool>,
   partclone_status: Receiver<PartcloneStatus>
@@ -108,12 +110,6 @@ impl CloneJob {
     format!("{}", self.id)
   }
 
-  fn rm_inprogress_file(&self) {
-    if let Err(err) = fs::remove_file(&self.destination) {
-      error!("Could not rm inprogress clone: {}", err);
-    }
-  }
-
   pub fn successful_destination(&self) -> &str {
     let (without_inprogress, _) = self.destination.split_at(self.destination.len() - ".inprogress".len());
     without_inprogress
@@ -159,9 +155,10 @@ impl CloneJob {
         .spawn()?
     };
 
-    Command::new("pigz").arg("-1c")
-      .stdin(unsafe { Stdio::from_raw_fd(partclone_cmd.stdout.take().unwrap().into_raw_fd()) })
+    let compress_cmd = Command::new("pigz").arg("-1c")
+      .stdin(unsafe { Stdio::from_raw_fd(partclone_cmd.stdout.as_mut().unwrap().as_raw_fd()) })
       .stdout(unsafe { Stdio::from_raw_fd(dest_raw_fd) })
+      .stderr(Stdio::null())
       .spawn()?;
 
     let stderr = partclone_cmd.stderr.take().unwrap();
@@ -178,6 +175,7 @@ impl CloneJob {
       source,
       destination: dest_file,
       partclone_cmd,
+      compress_cmd,
       partclone_status,
       start: UTC::now(),
       id: Uuid::new_v4(),
@@ -188,29 +186,22 @@ impl CloneJob {
 
 impl Drop for CloneJob {
   fn drop(&mut self) {
-    match self.partclone_cmd.wait_timeout(Duration::from_secs(0)) {
-      Ok(None) => {
-        if let Err(x) = self.partclone_cmd.kill() {
-          error!("Failed to kill CloneJob#cmd: {}", x);
-        }
-        self.rm_inprogress_file();
-      },
-      Ok(Some(status)) => {
-        if status.success() {
-          if let Err(err) = fs::rename(&self.destination, self.successful_destination()) {
-            error!("Failed to rename {}: {}", self.destination, err);
-          }
-        }
-        else {
-          warn!("CloneJob finished with != 0 exit");
-          self.rm_inprogress_file();
-        }
-      },
-      Err(x) => {
-        error!("Failed to drop CloneJob: {}", x);
-        self.rm_inprogress_file();
+    let pcl = self.partclone_cmd.wait_timeout(Duration::from_secs(0));
+    if pcl.is_ok() && pcl.as_ref().unwrap().is_some() && pcl.as_ref().unwrap().unwrap().success() {
+      self.compress_cmd.wait().expect("!CloneJob#compress_cmd.wait()");
+      if let Err(err) = fs::rename(&self.destination, self.successful_destination()) {
+        error!("Failed to rename {}: {}", self.destination, err);
       }
     }
+    else {
+      child::drop_log_errors(&mut self.compress_cmd, "CloneJob#compress_cmd");
+      // TODO move slow task out of main thread ?
+      if let Err(err) = fs::remove_file(&self.destination) {
+        error!("Could not rm inprogress clone: {}", err);
+      }
+    }
+    child::drop_log_errors(&mut self.partclone_cmd, "CloneJob#partclone_cmd");
+    child::drop_log_errors(&mut self.compress_cmd, "CloneJob#compress_cmd");
   }
 }
 
