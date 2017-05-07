@@ -75,6 +75,13 @@ impl<'j> RestoreJob {
           common: self.clone_status_common(),
           finish
         }
+      },
+      PartcloneStatus::Failed { finish } => {
+        RestoreStatus::Failed {
+          common: self.clone_status_common(),
+          finish,
+          reason: "Failed".to_owned()
+        }
       }
     })
   }

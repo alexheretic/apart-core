@@ -54,6 +54,7 @@ touch "$DIR/.control.$ME";
 complete="0.00"
 rate="9.99GB/min"
 remaining="00:03:02"
+error=false
 
 function echo_output_head_p1 {
   echo "Partclone v0.2.89-mock http://partclone.org" >&2
@@ -77,7 +78,15 @@ function echo_final {
   echo "Syncing... OK!" >&2
 }
 function move_cursor_up_2 { echo -en "\e[2A" >&2; }
-function read_control { source "$DIR/.control.$ME"; }
+function read_control {
+  source "$DIR/.control.$ME";
+  if $error; then
+    echo "" >&2
+    echo "" >&2
+    echo "Mock failure" >&2
+    exit 1
+  fi
+}
 
 ## mimick partclone output
 echo_output_head_p1

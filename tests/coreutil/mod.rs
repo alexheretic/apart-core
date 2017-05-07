@@ -104,7 +104,26 @@ impl Drop for TmpDir {
 
 pub struct MockPartcloneState {
   pub complete: f64,
-  pub rate: String
+  pub rate: String,
+  pub error: bool
+}
+
+impl MockPartcloneState{
+  pub fn new() -> MockPartcloneState {
+    MockPartcloneState { complete: 0.0, rate: "1.11GB/min".to_owned(), error: false }
+  }
+  pub fn complete(&mut self, complete: f64) -> &mut MockPartcloneState {
+    self.complete = complete;
+    self
+  }
+  pub fn rate(&mut self, rate: &str) -> &mut MockPartcloneState {
+    self.rate = rate.to_owned();
+    self
+  }
+  pub fn error(&mut self, error: bool) -> &mut MockPartcloneState {
+    self.error = error;
+    self
+  }
 }
 
 impl CoreHandle {
@@ -162,12 +181,16 @@ impl CoreHandle {
     self.socket.send_str(msg, 0).expect("sending to core failed");
   }
 
-  pub fn set_mock_partclone(&self, variant: &str, MockPartcloneState { complete, rate }: MockPartcloneState) -> Result<()> {
+  pub fn set_mock_partclone(&self,
+      variant: &str,
+      &MockPartcloneState { complete, ref rate, error }: &MockPartcloneState) -> Result<()> {
     let mut file = fs::OpenOptions::new()
       .write(true)
       .create(true)
       .open(self.path_of(&format!(".control.mockpcl.{}", variant)))?;
-    write!(file, "complete={:.2}\nrate=\"{}\"", complete * 100., rate)?;
+    write!(file, "complete={:.2}\n\
+                  rate=\"{}\"\n\
+                  error={}", complete * 100., rate, error)?;
     Ok(())
   }
 

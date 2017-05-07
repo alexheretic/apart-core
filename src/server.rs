@@ -138,8 +138,9 @@ impl Server {
         match job.try_recv() {
           Ok(status) => {
             self.zmq_send(&status.to_yaml())?;
-            if let CloneStatus::Finished {..} = status {
-              finished_job_ids.push(id.to_owned());
+            match status {
+              CloneStatus::Running{..} => (),
+              _ => finished_job_ids.push(id.to_owned())
             }
             did_work = true;
           }
@@ -154,8 +155,9 @@ impl Server {
       for (id, job) in &self.restores {
         if let Ok(status) = job.try_recv() {
           self.zmq_send(&status.to_yaml())?;
-          if let RestoreStatus::Finished {..} = status {
-            finished_job_ids.push(id.to_owned());
+          match status {
+            RestoreStatus::Running{..} => (),
+            _ => finished_job_ids.push(id.to_owned())
           }
           did_work = true;
         }

@@ -92,6 +92,13 @@ impl CloneJob {
           finish,
           image_size: meta.len()
         }
+      },
+      PartcloneStatus::Failed { finish } => {
+        CloneStatus::Failed {
+          common: self.clone_status_common(),
+          finish,
+          reason: "Failed".to_owned()
+        }
       }
     })
   }

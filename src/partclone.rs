@@ -7,11 +7,13 @@ use std::io::{ErrorKind, BufReader, BufRead, Error as IoError};
 use std::sync::mpsc::{Sender};
 use regex::Regex;
 use std::error::Error;
+use std::rc::Rc;
 
 #[derive(Debug)]
 pub enum PartcloneStatus {
   Running { complete: f64, rate: String, estimated_finish: DateTime<UTC> },
-  Synced { finish: DateTime<UTC> }
+  Synced { finish: DateTime<UTC> },
+  Failed { finish: DateTime<UTC> }
 }
 
 #[derive(Debug)]
@@ -38,6 +40,8 @@ pub fn cmd(variant: &str) -> Result<String, IoError> {
   Ok(partclone_dd.to_string())
 }
 
+static PARTCLONE_LOG_TAIL: usize = 4;
+
 pub fn read_output(stderr: ChildStderr, tx: Sender<PartcloneStatus>)
                          -> Result<(), Box<Error>> {
   let progress_re = Regex::new(
@@ -46,9 +50,14 @@ pub fn read_output(stderr: ChildStderr, tx: Sender<PartcloneStatus>)
   let (mut started_main_output, mut synced) = (false, false);
   let duration_re = Regex::new(r"^(\d{2,}):(\d{2}):(\d{2})$").unwrap();
 
+  let mut partclone_out_tail = Vec::new();
+
   'read: for line in BufReader::new(stderr).lines() {
     match line {
       Ok(out) => {
+        let out = Rc::new(out);
+        partclone_out_tail.push(out.clone());
+        if partclone_out_tail.len() > PARTCLONE_LOG_TAIL { partclone_out_tail.remove(0); }
         debug!("partclone: {}", out);
         if started_main_output {
           if !synced {
@@ -73,7 +82,7 @@ pub fn read_output(stderr: ChildStderr, tx: Sender<PartcloneStatus>)
               if let Err(err) = tx.send(PartcloneStatus::Running { estimated_finish, rate, complete }) {
                 // this can be expected if, for example, the job is cancelled
                 debug!("Could not send, job dropped?: {}", err);
-                break 'read;
+                return Ok(());
               }
             }
             if out.contains("Syncing... OK!") {
@@ -90,6 +99,14 @@ pub fn read_output(stderr: ChildStderr, tx: Sender<PartcloneStatus>)
   }
   if synced {
     if let Err(err) = tx.send(PartcloneStatus::Synced { finish: UTC::now() }) {
+      debug!("Could not send, job dropped?: {}", err);
+    }
+  }
+  else {
+    for tail_line in partclone_out_tail {
+      error!("Partclone-failed: {}", tail_line);
+    }
+    if let Err(err) = tx.send(PartcloneStatus::Failed { finish: UTC::now() }) {
       debug!("Could not send, job dropped?: {}", err);
     }
   }
