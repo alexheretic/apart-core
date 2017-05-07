@@ -7,7 +7,7 @@ rm -rf $dir/last-release
 mkdir $dir/last-release
 cd $dir/last-release
 
-tagname=$(grep -E ^version Cargo.toml | sed 's/version = "//' | sed 's/"//')
+tagname="v$(grep -E ^version ../Cargo.toml | sed 's/version = "//' | sed 's/"//')"
 if git rev-parse $tagname >/dev/null 2>&1
 then
   echo "tag $tagname already exists" >&2
