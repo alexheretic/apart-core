@@ -4,7 +4,8 @@ version = "0.2.0"
 authors = ["Alex Butler <alexheretic@gmail.com>"]
 
 [dependencies]
-zmq = { git = "https://github.com/alexheretic/rust-zmq", branch = "release/v0.8" }
+# awaiting 0.8.2 release
+zmq = { git = "https://github.com/erickt/rust-zmq", branch = "release/v0.8" }
 yaml-rust = "0"
 log = "0"
 wait-timeout = "0"
