@@ -202,7 +202,6 @@ impl Drop for CloneJob {
     }
     else {
       child::drop_log_errors(&mut self.compress_cmd, "CloneJob#compress_cmd");
-      // TODO move slow task out of main thread ?
       if let Err(err) = fs::remove_file(&self.destination) {
         error!("Could not rm inprogress clone: {}", err);
       }
