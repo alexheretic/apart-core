@@ -22,7 +22,7 @@ fn common_yaml(start: DateTime<UTC>, source: &str, destination: &str, id: &str) 
 
 fn complete_yaml_str(complete: f64) -> String {
   let complete = complete.to_string();
-  return if complete.len() == 1 {
+  if complete.len() == 1 {
     complete + ".0"
   }
   else {
@@ -33,7 +33,7 @@ fn complete_yaml_str(complete: f64) -> String {
 impl ToYaml for CloneStatusCommon {
   fn to_yaml(&self) -> String {
     let &CloneStatusCommon { start, ref source, ref destination, ref id, .. } = self;
-    common_yaml(start, &source, &destination, &id)
+    common_yaml(start, source, destination, id)
   }
 }
 
@@ -46,8 +46,8 @@ impl<'a> ToYaml for RestoreStatusCommon<'a> {
 
 impl ToYaml for CloneStatus {
   fn to_yaml(&self) -> String {
-    match self {
-      &CloneStatus::Running { complete, ref rate, ref common, ref estimated_finish } => {
+    match *self {
+      CloneStatus::Running { complete, ref rate, ref common, ref estimated_finish } => {
         let estimated_finish = estimated_finish
           .map_or_else(|| "~".to_owned(), |d| format!("{:?}", d));
         let rate = rate.clone().unwrap_or_else(|| "~".to_owned());
@@ -59,7 +59,7 @@ impl ToYaml for CloneStatus {
                 common_yaml = common.to_yaml(), complete = complete_yaml_str(complete), rate = rate,
                 finish = estimated_finish)
       },
-      &CloneStatus::Finished { ref finish, ref common, image_size } => {
+      CloneStatus::Finished { ref finish, ref common, image_size } => {
         format!("type: clone\n\
                 {common_yaml}\n\
                 complete: 1.0\n\
@@ -68,7 +68,7 @@ impl ToYaml for CloneStatus {
                 common_yaml = common.to_yaml(), finish = finish,
                 image_size = image_size)
       },
-      &CloneStatus::Failed { ref finish, ref common, ref reason } => {
+      CloneStatus::Failed { ref finish, ref common, ref reason } => {
         format!("type: clone-failed\n\
                 {common_yaml}\n\
                 finish: {finish:?}\n\
@@ -81,8 +81,8 @@ impl ToYaml for CloneStatus {
 
 impl<'a> ToYaml for RestoreStatus<'a> {
   fn to_yaml(&self) -> String {
-    match self {
-      &RestoreStatus::Running { ref common, complete, syncing, ref rate, estimated_finish } => {
+    match *self {
+      RestoreStatus::Running { ref common, complete, syncing, ref rate, estimated_finish } => {
         let estimated_finish = estimated_finish
           .map_or_else(|| "~".to_owned(), |d| format!("{:?}", d));
         let rate = rate.clone().unwrap_or_else(|| "~".to_owned());
@@ -95,14 +95,14 @@ impl<'a> ToYaml for RestoreStatus<'a> {
                 common_yaml = common.to_yaml(), complete = complete_yaml_str(complete), rate = rate,
                 finish = estimated_finish, syncing = syncing)
       },
-      &RestoreStatus::Finished { ref common, finish } => {
+      RestoreStatus::Finished { ref common, finish } => {
         format!("type: restore\n\
                 {common_yaml}\n\
                 complete: 1.0\n\
                 finish: {finish:?}",
                 finish = finish, common_yaml = common.to_yaml())
       },
-      &RestoreStatus::Failed { ref common, ref reason, finish } => {
+      RestoreStatus::Failed { ref common, ref reason, finish } => {
         format!("type: restore-failed\n\
                 {common_yaml}\n\
                 finish: {finish:?}\n\
@@ -123,7 +123,7 @@ pub fn status_yaml(status: &str, lsblk: Vec<JsonValue>) -> String {
 
     for device in lsblk {
       match (device["name"].as_str(), device["size"].as_str(), &device["children"]) {
-        (Some(name), Some(size), &JsonValue::Array(ref children)) if children.len() > 0 => {
+        (Some(name), Some(size), &JsonValue::Array(ref children)) if !children.is_empty() => {
           let mut source = yaml::Hash::new();
           source.insert(Yaml::from_str("name"), Yaml::from_str(name));
           source.insert(Yaml::from_str("size"), Yaml::from_str(size));
@@ -168,10 +168,10 @@ pub fn status_yaml(status: &str, lsblk: Vec<JsonValue>) -> String {
 
 impl ToYaml for DeleteResult {
   fn to_yaml(&self) -> String {
-    match self {
-      &DeleteResult(ref file, Ok(_)) => format!("type: deleted-clone\n\
+    match *self {
+      DeleteResult(ref file, Ok(_)) => format!("type: deleted-clone\n\
                                                 file: {}", file),
-      &DeleteResult(ref file, Err(ref err)) => {
+      DeleteResult(ref file, Err(ref err)) => {
         let reason = match err.kind() {
           ErrorKind::NotFound => "No such file".to_owned(),
           _ => err.to_string()

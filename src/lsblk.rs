@@ -5,7 +5,7 @@ use std::io::{Result, Error, ErrorKind};
 use std::process::{Command, Stdio};
 
 fn lsblk_cmd() -> String {
-  env::var("APART_LSBLK_CMD").unwrap_or("lsblk".to_owned())
+  env::var("APART_LSBLK_CMD").unwrap_or_else(|_| "lsblk".to_owned())
 }
 
 /**
@@ -39,7 +39,7 @@ pub fn fstype(source: &str) -> Option<String> {
     Err(_) => None,
     Ok(devices) => {
       for device in devices {
-        if let &JsonValue::Array(ref parts) = &device["children"] {
+        if let JsonValue::Array(ref parts) = device["children"] {
           for part in parts {
             if let (Some(name), Some(fstype)) = (part["name"].as_str(), part["fstype"].as_str()) {
               if source.ends_with(&format!("/{}", name)) {

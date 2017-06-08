@@ -135,16 +135,13 @@ impl Server {
 
       let mut finished_job_ids = Vec::new();
       for (id, job) in &self.clones {
-        match job.try_recv() {
-          Ok(status) => {
-            self.zmq_send(&status.to_yaml())?;
-            match status {
-              CloneStatus::Running{..} => (),
-              _ => finished_job_ids.push(id.to_owned())
-            }
-            did_work = true;
+        if let Ok(status) = job.try_recv() {
+          self.zmq_send(&status.to_yaml())?;
+          match status {
+            CloneStatus::Running{..} => (),
+            _ => finished_job_ids.push(id.to_owned())
           }
-          _ => ()
+          did_work = true;
         }
       }
       for id in &finished_job_ids { // allow CloneJob Drop to cleanup resources

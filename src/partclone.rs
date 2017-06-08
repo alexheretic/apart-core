@@ -31,7 +31,7 @@ impl Error for OutputInvalidError {
 }
 
 pub fn cmd(variant: &str) -> Result<String, IoError> {
-  let partclone_cmd = env::var("APART_PARTCLONE_CMD").unwrap_or("/usr/bin/partclone".to_owned());
+  let partclone_cmd = env::var("APART_PARTCLONE_CMD").unwrap_or_else(|_| "/usr/bin/partclone".to_owned());
   let partclone_dd = format!("{}.{}", partclone_cmd, variant);
   let cmd_path = Path::new(&partclone_dd);
   if !cmd_path.exists() {
@@ -42,7 +42,7 @@ pub fn cmd(variant: &str) -> Result<String, IoError> {
 
 static PARTCLONE_LOG_TAIL: usize = 4;
 
-pub fn read_output(stderr: ChildStderr, tx: Sender<PartcloneStatus>)
+pub fn read_output(stderr: ChildStderr, tx: &Sender<PartcloneStatus>)
                          -> Result<(), Box<Error>> {
   let progress_re = Regex::new(
     r"Remaining:\s*(\d{2,}:\d{2}:\d{2}), Completed:\s*(\d{1,3}\.?\d?\d?)%,\s*R?a?t?e?:?\s*([0-9][^,]+)").unwrap();
@@ -52,49 +52,44 @@ pub fn read_output(stderr: ChildStderr, tx: Sender<PartcloneStatus>)
 
   let mut partclone_out_tail = Vec::new();
 
-  'read: for line in BufReader::new(stderr).lines() {
-    match line {
-      Ok(out) => {
-        let out = Rc::new(out);
-        partclone_out_tail.push(out.clone());
-        if partclone_out_tail.len() > PARTCLONE_LOG_TAIL { partclone_out_tail.remove(0); }
-        debug!("partclone: {}", out);
-        if started_main_output {
-          if !synced {
-            for cap in progress_re.captures_iter(&out) {
-              let mut estimated_finish = None;
-              for cap in duration_re.captures_iter(&cap[1]) {
-                if let (Ok(hours), Ok(minutes), Ok(seconds)) =
-                    (cap[1].parse::<i64>(), cap[2].parse::<i64>(), cap[3].parse::<i64>()) {
-                  let remaining = OldDuration::hours(hours) +
-                    OldDuration::minutes(minutes) + OldDuration::seconds(seconds);
-                  estimated_finish = Some(UTC::now() + remaining);
-                }
-              }
-              let estimated_finish = estimated_finish
-                .ok_or(OutputInvalidError("!estimated_finish".to_owned()))?;
-
-              let complete = cap[2].parse::<f64>()? / 100.0;
-              let rate = cap[3].to_owned();
-              debug!("Partclone output: complete: {}, finish: {}, rate: {}",
-                complete, estimated_finish, rate);
-
-              if let Err(err) = tx.send(PartcloneStatus::Running { estimated_finish, rate, complete }) {
-                // this can be expected if, for example, the job is cancelled
-                debug!("Could not send, job dropped?: {}", err);
-                return Ok(());
+  for line in BufReader::new(stderr).lines() {
+    if let Ok(out) = line {
+      let out = Rc::new(out);
+      partclone_out_tail.push(out.clone());
+      if partclone_out_tail.len() > PARTCLONE_LOG_TAIL { partclone_out_tail.remove(0); }
+      debug!("partclone: {}", out);
+      if started_main_output {
+        if !synced {
+          for cap in progress_re.captures_iter(&out) {
+            let mut estimated_finish = None;
+            for cap in duration_re.captures_iter(&cap[1]) {
+              if let (Ok(hours), Ok(minutes), Ok(seconds)) =
+                  (cap[1].parse::<i64>(), cap[2].parse::<i64>(), cap[3].parse::<i64>()) {
+                let remaining = OldDuration::hours(hours) +
+                  OldDuration::minutes(minutes) + OldDuration::seconds(seconds);
+                estimated_finish = Some(UTC::now() + remaining);
               }
             }
-            if out.contains("Syncing... OK!") {
-              synced = true;
+            let estimated_finish = estimated_finish
+              .ok_or_else(|| OutputInvalidError("!estimated_finish".to_owned()))?;
+            let complete = cap[2].parse::<f64>()? / 100.0;
+            let rate = cap[3].to_owned();
+            debug!("Partclone output: complete: {}, finish: {}, rate: {}",
+              complete, estimated_finish, rate);
+            if let Err(err) = tx.send(PartcloneStatus::Running { estimated_finish, rate, complete }) {
+              // this can be expected if, for example, the job is cancelled
+              debug!("Could not send, job dropped?: {}", err);
+              return Ok(());
             }
           }
+          if out.contains("Syncing... OK!") {
+            synced = true;
+          }
         }
-        else if out.starts_with("File system:") {
-          started_main_output = true;
-        }
-      },
-      _ => ()
+      }
+      else if out.starts_with("File system:") {
+        started_main_output = true;
+      }
     }
   }
   if synced {

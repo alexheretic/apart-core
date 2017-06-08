@@ -80,7 +80,7 @@ impl CloneJob {
       PartcloneStatus::Running { rate, estimated_finish, complete } => {
         CloneStatus::Running {
           common: self.clone_status_common(),
-          complete: if complete == 1.0 { 0.9999 } else { complete },
+          complete: if complete > 0.9999 { 0.9999 } else { complete },
           rate: Some(rate),
           estimated_finish: Some(estimated_finish)
         }
@@ -173,7 +173,7 @@ impl CloneJob {
     thread::Builder::new()
       .name(format!("partclone-stderr-reader {}->{}", source, dest_file))
       .spawn(move|| {
-        if let Err(e) = partclone::read_output(stderr, tx) {
+        if let Err(e) = partclone::read_output(stderr, &tx) {
           warn!("partclone::read_output failed: {}", e);
         }
       })?;
@@ -193,6 +193,7 @@ impl CloneJob {
 
 impl Drop for CloneJob {
   fn drop(&mut self) {
+    // TODO use rust 1.18 try_wait
     let pcl = self.partclone_cmd.wait_timeout(Duration::from_secs(0));
     if pcl.is_ok() && pcl.as_ref().unwrap().is_some() && pcl.as_ref().unwrap().unwrap().success() {
       self.compress_cmd.wait().expect("!CloneJob#compress_cmd.wait()");

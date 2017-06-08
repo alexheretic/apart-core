@@ -64,8 +64,8 @@ impl<'j> RestoreJob {
       PartcloneStatus::Running { rate, estimated_finish, complete } => {
         RestoreStatus::Running {
           common: self.clone_status_common(),
-          complete: if complete == 1.0 { 0.9999 } else { complete },
-          syncing: complete == 1.0,
+          complete: if complete > 0.9999 { 0.9999 } else { complete },
+          syncing: complete > 0.9999,
           rate: Some(rate),
           estimated_finish: Some(estimated_finish)
         }
@@ -143,7 +143,7 @@ impl<'j> RestoreJob {
     thread::Builder::new()
       .name(format!("partclone-stderr-reader {}->{}", source, destination))
       .spawn(move|| {
-        if let Err(e) = partclone::read_output(stderr, tx) {
+        if let Err(e) = partclone::read_output(stderr, &tx) {
           error!("partclone::read_output failed: {}", e);
         }
       })?;
