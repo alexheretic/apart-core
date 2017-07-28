@@ -44,14 +44,14 @@ fn restore_success() {
   core.set_mock_partclone("dd", MockPartcloneState::new().complete(0.5634).rate("0.01GB/min"))
     .expect("!set_mock_partclone");
   let ref msg = core.expect_message_with(|msg| msg["complete"].as_f64() == Some(0.5634));
-  let expected_estimated_finished_time = UTC::now() + mock_duration;
+  let expected_estimated_finished_time = Utc::now() + mock_duration;
 
   assert_eq!(msg["id"].as_str(), id);
   assert_eq!(msg["rate"].as_str(), Some("0.01GB/min"));
   assert_eq!(msg["syncing"].as_bool(), Some(false));
 
   let estimated_finish = msg["estimated_finish"].as_str().expect("missing estimated_finish");
-  let estimated_finish_time: DateTime<UTC> = estimated_finish.parse().expect("!parse estimated_finish");
+  let estimated_finish_time: DateTime<Utc> = estimated_finish.parse().expect("!parse estimated_finish");
 
   let finish_time_diff = estimated_finish_time.signed_duration_since(expected_estimated_finished_time);
   if abs(finish_time_diff) > OldDuration::seconds(1) {

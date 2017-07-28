@@ -1,19 +1,18 @@
 [package]
 name = "apart-core"
-version = "0.2.0"
+version = "0.2.1"
 authors = ["Alex Butler <alexheretic@gmail.com>"]
 
 [dependencies]
-# awaiting 0.8.2 release
-zmq = { git = "https://github.com/erickt/rust-zmq", branch = "release/v0.8" }
-yaml-rust = "0"
-log = "0"
-wait-timeout = "0"
-env_logger = "0"
-regex = "0"
-chrono = "0"
-json = "0"
-uuid = { version = "0", features = ["v4"] }
+zmq = "0.8.2"
+yaml-rust = "0.3"
+log = "0.3"
+wait-timeout = "0.1"
+env_logger = "0.4"
+regex = "0.2"
+chrono = "0.4"
+json = "0.11"
+uuid = { version = "0.5", features = ["v4"] }
 
 [dev-dependencies]
-flate2 = "0"
+flate2 = "0.2"

@@ -17,7 +17,7 @@ pub struct RestoreStatusCommon<'a> {
   pub id: &'a str,
   pub source: &'a str,
   pub destination: &'a str,
-  pub start: DateTime<UTC>
+  pub start: DateTime<Utc>
 }
 
 #[derive(Debug)]
@@ -27,10 +27,10 @@ pub enum RestoreStatus<'a> {
     complete: f64,
     syncing: bool,
     rate: Option<String>,
-    estimated_finish: Option<DateTime<UTC>>
+    estimated_finish: Option<DateTime<Utc>>
   },
-  Finished { common: RestoreStatusCommon<'a>, finish: DateTime<UTC> },
-  Failed { common: RestoreStatusCommon<'a>, reason: String, finish: DateTime<UTC> }
+  Finished { common: RestoreStatusCommon<'a>, finish: DateTime<Utc> },
+  Failed { common: RestoreStatusCommon<'a>, reason: String, finish: DateTime<Utc> }
 }
 
 #[derive(Debug)]
@@ -41,7 +41,7 @@ pub struct RestoreJob {
   cat_cmd: Child,
   compress_cmd: Child,
   partclone_cmd: Child,
-  start: DateTime<UTC>,
+  start: DateTime<Utc>,
   sent_first_msg: Cell<bool>,
   partclone_status: Receiver<PartcloneStatus>
 }
@@ -103,7 +103,7 @@ impl<'j> RestoreJob {
     RestoreStatus::Failed {
       common: self.clone_status_common(),
       reason: reason.to_owned(),
-      finish: UTC::now()
+      finish: Utc::now()
     }
   }
 
@@ -155,7 +155,7 @@ impl<'j> RestoreJob {
       compress_cmd: pigz,
       partclone_cmd,
       partclone_status,
-      start: UTC::now(),
+      start: Utc::now(),
       sent_first_msg: Cell::new(false),
       id: Uuid::new_v4().to_string()
     };

@@ -10,7 +10,7 @@ use std::io::{ErrorKind, Error, Result};
 use std::time::{Duration, Instant};
 use wait_timeout::ChildExt;
 use std::fs;
-use std::path::{PathBuf, Path};
+use std::path::PathBuf;
 use std::process::Stdio;
 use std::io::{Read, Write};
 use flate2::read::GzDecoder;

@@ -12,7 +12,7 @@ pub trait ToYaml {
   fn to_yaml(&self) -> String;
 }
 
-fn common_yaml(start: DateTime<UTC>, source: &str, destination: &str, id: &str) -> String {
+fn common_yaml(start: DateTime<Utc>, source: &str, destination: &str, id: &str) -> String {
   format!("id: {id}\n\
           source: {source}\n\
           destination: {destination}\n\
@@ -228,10 +228,10 @@ mod tests {
         source: "/dev/ars2".to_owned(),
         destination: "/mnt/backups/ars2.gz".to_owned(),
         inprogress_destination: "/mnt/backups/ars2.gz.inprogress".to_owned(),
-        start: UTC.ymd(2017, 4, 18).and_hms(15, 44, 12),
+        start: Utc.ymd(2017, 4, 18).and_hms(15, 44, 12),
         id: "some-id".to_owned()
       },
-      estimated_finish: Some(UTC.ymd(2017, 4, 18).and_hms(15, 45, 00)),
+      estimated_finish: Some(Utc.ymd(2017, 4, 18).and_hms(15, 45, 00)),
       complete: 0.123,
       rate: Some("1GB/s".to_owned()) }.to_yaml();
     let yaml = YamlLoader::load_from_str(&yaml_str).unwrap().remove(0);
@@ -250,10 +250,10 @@ mod tests {
       common: RestoreStatusCommon {
         source: "/mnt/backups/ars2.gz",
         destination: "/dev/ars2",
-        start: UTC.ymd(2017, 4, 18).and_hms(15, 44, 12),
+        start: Utc.ymd(2017, 4, 18).and_hms(15, 44, 12),
         id: "some-id"
       },
-      estimated_finish: Some(UTC.ymd(2017, 4, 18).and_hms(15, 45, 00)),
+      estimated_finish: Some(Utc.ymd(2017, 4, 18).and_hms(15, 45, 00)),
       complete: 0.123,
       syncing: false,
       rate: Some("1GB/s".to_owned()) }.to_yaml();
@@ -278,7 +278,7 @@ mod tests {
         source: "/dev/ars2".to_owned(),
         destination: "/mnt/backups/ars2.gz".to_owned(),
         inprogress_destination: "/mnt/backups/ars2.gz.inprogress".to_owned(),
-        start: UTC.ymd(2017, 4, 18).and_hms(15, 44, 12),
+        start: Utc.ymd(2017, 4, 18).and_hms(15, 44, 12),
         id: "some-id".to_owned()
       },
       estimated_finish: None,
@@ -296,10 +296,10 @@ mod tests {
         source: "/dev/ars3".to_owned(),
         destination: "/mnt/backups/ars3.gz".to_owned(),
         inprogress_destination: "/mnt/backups/ars2.gz.inprogress".to_owned(),
-        start: UTC.ymd(2017, 4, 18).and_hms(15, 44, 12),
+        start: Utc.ymd(2017, 4, 18).and_hms(15, 44, 12),
         id: "some-id".to_owned()
       },
-      finish: UTC.ymd(2017, 4, 18).and_hms(15, 45, 34),
+      finish: Utc.ymd(2017, 4, 18).and_hms(15, 45, 34),
       image_size: 123123 }.to_yaml();
     let yaml = YamlLoader::load_from_str(&yaml_str).unwrap().remove(0);
     assert_eq!(yaml["type"].as_str(), Some("clone"));
@@ -318,10 +318,10 @@ mod tests {
       common: RestoreStatusCommon {
         source: "/mnt/backups/ars3.gz",
         destination: "/dev/ars3",
-        start: UTC.ymd(2017, 4, 18).and_hms(15, 44, 12),
+        start: Utc.ymd(2017, 4, 18).and_hms(15, 44, 12),
         id: "some-id"
       },
-      finish: UTC.ymd(2017, 4, 18).and_hms(15, 45, 34) }.to_yaml();
+      finish: Utc.ymd(2017, 4, 18).and_hms(15, 45, 34) }.to_yaml();
     let yaml = YamlLoader::load_from_str(&yaml_str).unwrap().remove(0);
     assert_eq!(yaml["type"].as_str(), Some("restore"));
     assert_eq!(yaml["complete"].as_f64(), Some(1.0));
@@ -339,10 +339,10 @@ mod tests {
         source: "/dev/ars3".to_owned(),
         destination: "/mnt/backups/ars3.gz".to_owned(),
         inprogress_destination: "/mnt/backups/ars2.gz.inprogress".to_owned(),
-        start: UTC.ymd(2017, 4, 18).and_hms(15, 44, 12),
+        start: Utc.ymd(2017, 4, 18).and_hms(15, 44, 12),
         id: "some-id".to_owned()
       },
-      finish: UTC.ymd(2017, 4, 18).and_hms(15, 45, 34),
+      finish: Utc.ymd(2017, 4, 18).and_hms(15, 45, 34),
       reason: "something went wrong".to_owned() }.to_yaml();
     let yaml = YamlLoader::load_from_str(&yaml_str).unwrap().remove(0);
     assert_eq!(yaml["type"].as_str(), Some("clone-failed"));
@@ -360,10 +360,10 @@ mod tests {
         source: "/dev/ars3".to_owned(),
         destination: "/mnt/backups/ars3.gz".to_owned(),
         inprogress_destination: "/mnt/backups/ars2.gz.inprogress".to_owned(),
-        start: UTC.ymd(2017, 4, 18).and_hms(15, 44, 12),
+        start: Utc.ymd(2017, 4, 18).and_hms(15, 44, 12),
         id: "some-id".to_owned()
       },
-      estimated_finish: Some(UTC.ymd(2017, 4, 18).and_hms(15, 45, 00)),
+      estimated_finish: Some(Utc.ymd(2017, 4, 18).and_hms(15, 45, 00)),
       complete: 1.0,
       rate: Some("2GB/s".to_owned()) }.to_yaml();
     let yaml = YamlLoader::load_from_str(&yaml_str).unwrap().remove(0);
@@ -373,10 +373,10 @@ mod tests {
         source: "/dev/ars3".to_owned(),
         destination: "/mnt/backups/ars3.gz".to_owned(),
         inprogress_destination: "/mnt/backups/ars2.gz.inprogress".to_owned(),
-        start: UTC.ymd(2017, 4, 18).and_hms(15, 44, 12),
+        start: Utc.ymd(2017, 4, 18).and_hms(15, 44, 12),
         id: "some-id".to_owned()
       },
-      estimated_finish: Some(UTC.ymd(2017, 4, 18).and_hms(15, 45, 00)),
+      estimated_finish: Some(Utc.ymd(2017, 4, 18).and_hms(15, 45, 00)),
       complete: 0.0,
       rate: Some("3GB/s".to_owned()) }.to_yaml();
     let yaml = YamlLoader::load_from_str(&yaml_str).unwrap().remove(0);

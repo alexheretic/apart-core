@@ -24,7 +24,7 @@ pub struct CloneStatusCommon {
   pub source: String,
   pub destination: String,
   pub inprogress_destination: String,
-  pub start: DateTime<UTC>
+  pub start: DateTime<Utc>
 }
 
 #[derive(PartialEq, Debug)]
@@ -33,10 +33,10 @@ pub enum CloneStatus {
     common: CloneStatusCommon,
     complete: f64,
     rate: Option<String>,
-    estimated_finish: Option<DateTime<UTC>>
+    estimated_finish: Option<DateTime<Utc>>
   },
-  Finished { common: CloneStatusCommon, finish: DateTime<UTC>, image_size: u64 },
-  Failed { common: CloneStatusCommon, reason: String, finish: DateTime<UTC> }
+  Finished { common: CloneStatusCommon, finish: DateTime<Utc>, image_size: u64 },
+  Failed { common: CloneStatusCommon, reason: String, finish: DateTime<Utc> }
 }
 
 #[derive(Debug)]
@@ -46,7 +46,7 @@ pub struct CloneJob {
   id: Uuid,
   partclone_cmd: Child,
   compress_cmd: Child,
-  start: DateTime<UTC>,
+  start: DateTime<Utc>,
   sent_first_msg: Cell<bool>,
   partclone_status: Receiver<PartcloneStatus>
 }
@@ -126,7 +126,7 @@ impl CloneJob {
     CloneStatus::Failed {
       common: self.clone_status_common(),
       reason: reason.to_owned(),
-      finish: UTC::now()
+      finish: Utc::now()
     }
   }
 
@@ -184,7 +184,7 @@ impl CloneJob {
       partclone_cmd,
       compress_cmd,
       partclone_status,
-      start: UTC::now(),
+      start: Utc::now(),
       id: Uuid::new_v4(),
       sent_first_msg: Cell::new(false)
     })

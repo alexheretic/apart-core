@@ -25,7 +25,7 @@ fn do_clone_job() {
                           destination: {destination}\n\
                           name: do_clone_job", destination = core.tmp_dir());
 
-  let send_time = UTC::now();
+  let send_time = Utc::now();
   core.send(&clone_msg);
   let expected_filename = format!("do_clone_job-{}.apt.dd.gz", Local::now().format("%Y-%m-%dT%H%M"));
 
@@ -33,7 +33,7 @@ fn do_clone_job() {
   let id = msg["id"].as_str();
   let start = msg["start"].as_str();
   // ensure we get a timely initial message not waiting for partclone rate/estimated remaining
-  assert!(UTC::now().signed_duration_since(send_time) <= OldDuration::milliseconds(50));
+  assert!(Utc::now().signed_duration_since(send_time) <= OldDuration::milliseconds(500));
 
   let ref msg = core.expect_message_with(|msg|
     msg["type"].as_str() == Some("clone") && msg["rate"].as_str().is_some());
@@ -54,13 +54,13 @@ fn do_clone_job() {
   core.set_mock_partclone("dd", MockPartcloneState::new().complete(0.5634).rate("0.01GB/min"))
     .expect("!set_mock_partclone");
   let ref msg = core.expect_message_with(|msg| msg["complete"].as_f64() == Some(0.5634));
-  let expected_estimated_finished_time = UTC::now() + mock_duration;
+  let expected_estimated_finished_time = Utc::now() + mock_duration;
 
   assert_eq!(msg["id"].as_str(), id);
   assert_eq!(msg["rate"].as_str(), Some("0.01GB/min"));
 
   let estimated_finish = msg["estimated_finish"].as_str().expect("missing estimated_finish");
-  let estimated_finish_time: DateTime<UTC> = estimated_finish.parse().expect("!parse estimated_finish");
+  let estimated_finish_time: DateTime<Utc> = estimated_finish.parse().expect("!parse estimated_finish");
 
   let finish_time_diff = estimated_finish_time.signed_duration_since(expected_estimated_finished_time);
   if abs(finish_time_diff) > OldDuration::seconds(1) {

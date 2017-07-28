@@ -11,9 +11,9 @@ use std::rc::Rc;
 
 #[derive(Debug)]
 pub enum PartcloneStatus {
-  Running { complete: f64, rate: String, estimated_finish: DateTime<UTC> },
-  Synced { finish: DateTime<UTC> },
-  Failed { finish: DateTime<UTC> }
+  Running { complete: f64, rate: String, estimated_finish: DateTime<Utc> },
+  Synced { finish: DateTime<Utc> },
+  Failed { finish: DateTime<Utc> }
 }
 
 #[derive(Debug)]
@@ -67,7 +67,7 @@ pub fn read_output(stderr: ChildStderr, tx: &Sender<PartcloneStatus>)
                   (cap[1].parse::<i64>(), cap[2].parse::<i64>(), cap[3].parse::<i64>()) {
                 let remaining = OldDuration::hours(hours) +
                   OldDuration::minutes(minutes) + OldDuration::seconds(seconds);
-                estimated_finish = Some(UTC::now() + remaining);
+                estimated_finish = Some(Utc::now() + remaining);
               }
             }
             let estimated_finish = estimated_finish
@@ -93,7 +93,7 @@ pub fn read_output(stderr: ChildStderr, tx: &Sender<PartcloneStatus>)
     }
   }
   if synced {
-    if let Err(err) = tx.send(PartcloneStatus::Synced { finish: UTC::now() }) {
+    if let Err(err) = tx.send(PartcloneStatus::Synced { finish: Utc::now() }) {
       debug!("Could not send, job dropped?: {}", err);
     }
   }
@@ -101,7 +101,7 @@ pub fn read_output(stderr: ChildStderr, tx: &Sender<PartcloneStatus>)
     for tail_line in partclone_out_tail {
       error!("Partclone-failed: {}", tail_line);
     }
-    if let Err(err) = tx.send(PartcloneStatus::Failed { finish: UTC::now() }) {
+    if let Err(err) = tx.send(PartcloneStatus::Failed { finish: Utc::now() }) {
       debug!("Could not send, job dropped?: {}", err);
     }
   }

@@ -1,4 +1,4 @@
-use yaml_rust::{YamlLoader};
+use yaml_rust::YamlLoader;
 use self::Request::*;
 
 #[derive(PartialEq, Debug)]
