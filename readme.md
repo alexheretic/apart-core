@@ -183,7 +183,8 @@ sources:
     size: 32212254720
     mounted: false
 compression_options:
-- gz  # should always be available as is provided by `pigz` as a required dependency
+- gz  # default, always available; provided by `pigz` as a required dependency
+- uncompressed # always available
 - lz4  # available if `lz4` is installed
 - zstd  # available if `zstdmt` is installed
 ```
@@ -214,3 +215,5 @@ Core will cancel all jobs and shutdown (sending the dying status above)
 * zeromq
 * partclone
 * pigz
+* lz4 *(optional: adds compression option)*
+* zstd *(optional: adds compression option)*

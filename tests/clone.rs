@@ -83,7 +83,7 @@ fn do_clone_job() {
   assert!(msg["image_size"].as_i64().is_some(), "missing clone.image_size");
 
   let output = core.get_tmp_file_contents_bytes(&expected_filename).expect("!read $tmp_dir/do_clone_job.apt.gz");
-  assert_eq!(decompress(&output).expect("!decompress"), "mock-partition-/dev/sda5-data");
+  assert_eq!(decompress_gz(&output).expect("!decompress"), "mock-partition-/dev/sda5-data");
 
   assert!(core.tmp_file_contents_is_1(".latest.finished.mockpcl.dd.txt"), "partclone didn't finish");
 }
@@ -93,6 +93,16 @@ fn abs(duration: OldDuration) -> OldDuration {
     return duration * -1
   }
   duration
+}
+
+use flate2::read::GzDecoder;
+use std::io::{Read, Result};
+
+fn decompress_gz(zipped: &[u8]) -> Result<String> {
+  let mut d = GzDecoder::new(zipped)?;
+  let mut s = String::new();
+  d.read_to_string(&mut s)?;
+  Ok(s)
 }
 
 #[test]
@@ -146,7 +156,7 @@ fn clone_using_partclone_fstype_variant_ext2() {
 fn clone_and_compress_with_zstd() {
     let _ = env_logger::init();
 
-    if Command::new("zstdmt").arg("--version").stderr(Stdio::null()).spawn().is_err() {
+    if Command::new("zstdmt").arg("--version").stdout(Stdio::null()).spawn().is_err() {
         warn!("Can't test zstd as `zstdmt` is not installed on this system");
         return;
     }
@@ -193,6 +203,32 @@ fn clone_and_compress_with_lz4() {
                             compression: lz4", destination = core.tmp_dir());
     core.send(&clone_msg);
     let expected_filename = format!("lz4_job-{}.apt.ext2.lz4", Local::now().format("%Y-%m-%dT%H%M"));
+
+    core.set_mock_partclone("ext2", MockPartcloneState::new().complete(1.0).rate("1.23GB/min"))
+        .expect("!set_mock_partclone");
+    let ref msg = core.expect_message_with(|msg| msg["complete"].as_f64() == Some(1.0));
+    assert_eq!(msg["source"].as_str(), Some("/dev/sdb1"));
+    assert_eq!(msg["destination"].as_str(),
+        Some(format!("{}/{}", core.tmp_dir(), expected_filename).as_ref()));
+    assert_eq!(core.get_tmp_file_contents_utf8(".latest.s.mockpcl.ext2.txt").expect("!last source"),
+        "/dev/sdb1");
+    assert!(core.tmp_file_contents_is_1(".latest.c.mockpcl.ext2.txt"),
+        "partclone.ext2 not invoked with '-c'");
+    assert!(core.tmp_file_contents_is_1(".latest.finished.mockpcl.ext2.txt"),
+        "partclone didn't finish");
+}
+
+#[test]
+fn clone_uncompressed() {
+    let core = CoreHandle::new().unwrap();
+
+    let clone_msg = format!("type: clone\n\
+                            source: /dev/sdb1\n\
+                            destination: {destination}\n\
+                            name: no_z_job\n\
+                            compression: uncompressed", destination = core.tmp_dir());
+    core.send(&clone_msg);
+    let expected_filename = format!("no_z_job-{}.apt.ext2.uncompressed", Local::now().format("%Y-%m-%dT%H%M"));
 
     core.set_mock_partclone("ext2", MockPartcloneState::new().complete(1.0).rate("1.23GB/min"))
         .expect("!set_mock_partclone");

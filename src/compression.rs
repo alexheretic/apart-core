@@ -28,8 +28,14 @@ const ZSTD: Compression = Compression {
     write_args: "-c",
     read_args: "-dc",
 };
+const NONE: Compression = Compression {
+    name: "uncompressed",
+    command: "cat",
+    write_args: "-",
+    read_args: "-",
+};
 
-const ALL: &[Compression] = &[PIGZ, ZSTD, LZ4];
+const ALL: &[Compression] = &[PIGZ, NONE, ZSTD, LZ4];
 
 impl Compression {
     pub fn from_name(name: &str) -> Result<Compression, String> {

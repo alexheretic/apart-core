@@ -13,14 +13,6 @@ use std::fs;
 use std::path::PathBuf;
 use std::process::Stdio;
 use std::io::{Read, Write};
-use flate2::read::GzDecoder;
-
-pub fn decompress(zipped: &[u8]) -> Result<String> {
-  let mut d = GzDecoder::new(zipped)?;
-  let mut s = String::new();
-  d.read_to_string(&mut s)?;
-  Ok(s)
-}
 
 pub struct CoreHandle {
   pub process: Child,

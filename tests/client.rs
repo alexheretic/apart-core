@@ -1,5 +1,5 @@
-#[macro_use] extern crate log;
-extern crate env_logger;
+// #[macro_use] extern crate log;
+// extern crate env_logger;
 extern crate flate2;
 extern crate uuid;
 extern crate zmq;
@@ -22,7 +22,7 @@ fn initial_status_message() {
 
     let sda = &core.initial_message["sources"][0];
     assert_eq!(sda["name"].as_str(), Some("sda"));
-    assert_eq!(sda["size"].as_i64(), Some(750156374016));
+    assert_eq!(sda["size"].as_i64(), Some(750_156_374_016));
 
     assert_partition(
         &sda["parts"][0],
@@ -152,6 +152,7 @@ fn kill_request() {
     }
 }
 
+#[derive(Debug, Clone, Copy)]
 struct PartitionExpectation {
     name: &'static str,
     size: i64,

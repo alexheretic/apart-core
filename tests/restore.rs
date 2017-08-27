@@ -180,7 +180,7 @@ fn restore_lz4_compressed() {
 fn restore_zstd_compressed() {
     let _ = env_logger::init();
 
-    if Command::new("zstdmt").arg("--version").stderr(Stdio::null()).spawn().is_err() {
+    if Command::new("zstdmt").arg("--version").stdout(Stdio::null()).spawn().is_err() {
         warn!("Can't test zstd as `zstd` is not installed on this system");
         return;
     }
@@ -188,6 +188,32 @@ fn restore_zstd_compressed() {
     let core = CoreHandle::new().unwrap();
 
     let source_image = format!("{}/{}", core.tmp_dir(), "mockimg-2017-04-20T1500.apt.ext2.zstd");
+    let clone_msg = format!("type: restore\n\
+                            source: {source}\n\
+                            destination: /dev/abc124", source = source_image);
+    core.send(&clone_msg);
+
+    core.set_mock_partclone("ext2", MockPartcloneState::new().complete(1.0).rate("1.23GB/min"))
+      .expect("!set_mock_partclone");
+    let ref msg = core.expect_message_with(|msg| msg["complete"].as_f64() == Some(1.0));
+    assert_eq!(msg["source"].as_str(), Some(source_image.as_ref()));
+    assert_eq!(msg["destination"].as_str(), Some("/dev/abc124"));
+    assert_eq!(core.get_tmp_file_contents_utf8(".latest.o.mockpcl.ext2.txt").expect("!last -o"),
+      "/dev/abc124");
+    assert!(core.tmp_file_contents_is_1(".latest.r.mockpcl.ext2.txt"),
+      "partclone.f2fs not invoke with -r");
+
+    let partclone_stdin = core.get_tmp_file_contents_utf8(".latest.stdin.mockpcl.ext2.txt")
+      .expect("!.latest.stdin.mockpcl.ext2.txt");
+    assert_eq!(partclone_stdin, MOCK_IMAGE_CONTENTS);
+    assert!(core.tmp_file_contents_is_1(".latest.finished.mockpcl.ext2.txt"), "partclone didn't finish");
+}
+
+#[test]
+fn restore_uncompressed() {
+    let core = CoreHandle::new().unwrap();
+
+    let source_image = format!("{}/{}", core.tmp_dir(), "mockimg-2017-04-20T1500.apt.ext2.uncompressed");
     let clone_msg = format!("type: restore\n\
                             source: {source}\n\
                             destination: /dev/abc124", source = source_image);
