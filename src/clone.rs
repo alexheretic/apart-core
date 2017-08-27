@@ -17,6 +17,7 @@ use lsblk;
 use partclone;
 use partclone::*;
 use child;
+use compression::Compression;
 
 #[derive(Clone, PartialEq, Debug)]
 pub struct CloneStatusCommon {
@@ -51,11 +52,16 @@ pub struct CloneJob {
   partclone_status: Receiver<PartcloneStatus>
 }
 
-fn destination_raw_fd(dir: &str, name: &str, partclone_variant: &str) -> IoResult<(String, RawFd)> {
+fn destination_raw_fd(dir: &str, name: &str, partclone_variant: &str, z: Compression)
+    -> IoResult<(String, RawFd)>
+{
   // something like: "/mnt/backups/mypart-2017-01-25T1245.apt.gz.inprogress"
-  let file = format!("{directory}/{name}-{timestamp}.apt.{partclone_variant}.gz.inprogress",
-    directory = dir, name = name, timestamp = Local::now().format("%Y-%m-%dT%H%M"),
-    partclone_variant = partclone_variant);
+  let file = format!("{directory}/{name}-{timestamp}.apt.{partclone_variant}.{z_name}.inprogress",
+    directory = dir,
+    name = name,
+    timestamp = Local::now().format("%Y-%m-%dT%H%M"),
+    partclone_variant = partclone_variant,
+    z_name = z.name);
   let path = Path::new(&file);
   if path.exists() {
     return Err(IoError::new(ErrorKind::AlreadyExists, format!("{} already exists", file)));
@@ -130,7 +136,9 @@ impl CloneJob {
     }
   }
 
-  pub fn new(source: String, destination: String, name: String) -> IoResult<CloneJob> {
+  pub fn new(source: String, destination: String, name: String, z: Compression)
+    -> IoResult<CloneJob>
+  {
     let (partclone_variant, partclone_cmd) = match lsblk::fstype(&source) {
       Some(fstype) => match partclone::cmd(&fstype) {
         Ok(cmd) => (fstype, cmd),
@@ -144,7 +152,7 @@ impl CloneJob {
         ("dd".to_owned(), partclone::cmd("dd")?)
       }
     };
-    let (dest_file, dest_raw_fd) = destination_raw_fd(&destination, &name, &partclone_variant)?;
+    let (dest_file, dest_raw_fd) = destination_raw_fd(&destination, &name, &partclone_variant, z)?;
 
     let mut partclone_cmd = {
       let mut args = Vec::new();
@@ -162,7 +170,7 @@ impl CloneJob {
         .spawn()?
     };
 
-    let compress_cmd = Command::new("pigz").arg("-1c")
+    let compress_cmd = Command::new(z.command).arg(z.write_args)
       .stdin(unsafe { Stdio::from_raw_fd(partclone_cmd.stdout.take().unwrap().into_raw_fd()) })
       .stdout(unsafe { Stdio::from_raw_fd(dest_raw_fd) })
       .stderr(Stdio::null())

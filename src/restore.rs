@@ -11,6 +11,7 @@ use std::error::Error;
 use std::cell::{Cell};
 use clone::partclone_variant_from_image;
 use child;
+use compression::Compression;
 
 #[derive(Debug)]
 pub struct RestoreStatusCommon<'a> {
@@ -110,13 +111,15 @@ impl<'j> RestoreJob {
   pub fn new(source: String, destination: String) -> Result<RestoreJob, Box<Error>> {
     let partclone_cmd = partclone::cmd(&partclone_variant_from_image(&source)?)?;
 
+    let z = Compression::from_file_name(&source)?;
+
     let mut cat = Command::new("cat").arg(&source)
       .stdout(Stdio::piped())
       .stdin(Stdio::null())
       .stderr(Stdio::null())
       .spawn()?;
 
-    let mut pigz = Command::new("pigz").arg("-dc")
+    let mut z_process = Command::new(z.command).arg(z.read_args)
       .stdout(Stdio::piped())
       .stdin(unsafe { Stdio::from_raw_fd(cat.stdout.take().expect("!cat.stdout").into_raw_fd()) })
       .stderr(Stdio::null())
@@ -133,7 +136,7 @@ impl<'j> RestoreJob {
       Command::new(partclone_cmd)
       .args(&args)
       .stdout(Stdio::null())
-      .stdin(unsafe { Stdio::from_raw_fd(pigz.stdout.take().expect("!pigz.stdout").into_raw_fd()) })
+      .stdin(unsafe { Stdio::from_raw_fd(z_process.stdout.take().expect("!z.stdout").into_raw_fd()) })
       .stderr(Stdio::piped())
       .spawn()?
     };
@@ -152,7 +155,7 @@ impl<'j> RestoreJob {
       source,
       destination,
       cat_cmd: cat,
-      compress_cmd: pigz,
+      compress_cmd: z_process,
       partclone_cmd,
       partclone_status,
       start: Utc::now(),

@@ -1,19 +1,26 @@
 use yaml_rust::YamlLoader;
 use self::Request::*;
+use compression::Compression;
 
 #[derive(PartialEq, Debug)]
 pub enum Request {
-  StatusRequest,
-  KillRequest,
+    StatusRequest,
+    KillRequest,
 
-  CloneRequest { source: String, destination: String, name: String },
-  CancelCloneRequest { id: String },
+    CloneRequest {
+        source: String,
+        destination: String,
+        name: String,
+        compression: Compression,
+    },
+    CancelCloneRequest { id: String },
 
-  RestoreRequest { source: String, destination: String },
-  CancelRestoreRequest { id: String },
+    RestoreRequest { source: String, destination: String },
+    CancelRestoreRequest { id: String },
 
-  DeleteImageRequest { file: String }
+    DeleteImageRequest { file: String },
 }
+
 
 impl Request {
   /// Parses a yaml string to a Request struct, all errors -> None
@@ -27,13 +34,31 @@ impl Request {
         if let Some("kill-request") = msg_type {
           return Some(KillRequest)
         }
-        if let (Some("clone"), Some(source), Some(dest), Some(name)) =
-            (msg_type, msg["source"].as_str(), msg["destination"].as_str(), msg["name"].as_str()) {
-          return Some(CloneRequest {
-            source: source.to_owned(),
-            destination: dest.to_owned(),
-            name: name.to_owned()
-          })
+        if let (Some("clone"), Some(source), Some(dest), Some(name), compression) =
+            (msg_type, msg["source"].as_str(), msg["destination"].as_str(),
+            msg["name"].as_str(), msg["compression"].as_str()) {
+
+            let z = {
+                if let Some(name) = compression {
+                    match Compression::from_name(name) {
+                        Ok(z) => z,
+                        Err(err) => {
+                            warn!("{}", err);
+                            return None;
+                        }
+                    }
+                }
+                else {
+                    Compression::default()
+                }
+            };
+
+            return Some(CloneRequest {
+                source: source.to_owned(),
+                destination: dest.to_owned(),
+                name: name.to_owned(),
+                compression: z,
+            })
         }
         if let (Some("restore"), Some(source), Some(dest)) =
             (msg_type, msg["source"].as_str(), msg["destination"].as_str()) {
@@ -83,7 +108,8 @@ mod tests {
     assert_eq!(message, Some(CloneRequest {
       source: "/dev/abc12".to_owned(),
       destination: "/mnt/backups/".to_owned(),
-      name: "alex".to_owned()
+      name: "alex".to_owned(),
+      compression: Compression::default(),
     }));
   }
 

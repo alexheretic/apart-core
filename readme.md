@@ -57,6 +57,9 @@ type: clone
 source: /dev/sda1  # a valid partition
 destination: /mnt/backups/  # some directory absolute path
 name: work  # name of backup
+
+# [optional fields]
+compression: gz # assumes `gz` if absent, see status message `compression_options`
 ```
 Client will then receive regular update messages on the progress of the clone job
 ```yaml
@@ -179,6 +182,10 @@ sources:
   - name: sda2
     size: 32212254720
     mounted: false
+compression_options:
+- gz  # should always be available as is provided by `pigz` as a required dependency
+- lz4  # available if `lz4` is installed
+- zstd  # available if `zstdmt` is installed
 ```
 To get an updated status message for whatever reason send:
 ```yaml

@@ -7,6 +7,7 @@ use yaml_rust::yaml;
 use yaml_rust::yaml::Yaml;
 use yaml_rust::emitter::YamlEmitter;
 use server::DeleteResult;
+use compression::Compression;
 
 pub trait ToYaml {
   fn to_yaml(&self) -> String;
@@ -160,6 +161,12 @@ pub fn status_yaml(status: &str, lsblk: Vec<JsonValue>) -> String {
 
     yaml.insert(Yaml::from_str("sources"), Yaml::Array(sources));
   }
+
+  let mut compression_options = yaml::Array::new();
+  for z in Compression::all_installed() {
+      compression_options.push(Yaml::from_str(z.name));
+  }
+  yaml.insert(Yaml::from_str("compression_options"), Yaml::Array(compression_options));
 
   let mut yaml_str = String::new();
   YamlEmitter::new(&mut yaml_str).dump(&Yaml::Hash(yaml)).unwrap();

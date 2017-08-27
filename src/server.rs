@@ -71,8 +71,8 @@ impl Server {
               info!("KillRequest received dying...");
               return Ok(())
             },
-            Some(CloneRequest { source, destination, name }) => {
-              match CloneJob::new(source, destination, name) {
+            Some(CloneRequest { source, destination, name, compression }) => {
+              match CloneJob::new(source, destination, name, compression) {
                 Ok(job) => {
                   info!("Starting new job: {}", job);
                   self.clones.insert(job.id().to_owned(), job);
