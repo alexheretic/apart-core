@@ -147,7 +147,7 @@ fn restore_using_partclone_fstype_variant_ext2() {
 fn restore_lz4_compressed() {
     let _ = env_logger::init();
 
-    if Command::new("lz4").arg("--version").stderr(Stdio::null()).spawn().is_err() {
+    if Command::new("lz4").arg("--version").stderr(Stdio::null()).status().is_err() {
         warn!("Can't test lz4 as `lz4` is not installed on this system");
         return;
     }
@@ -180,7 +180,7 @@ fn restore_lz4_compressed() {
 fn restore_zstd_compressed() {
     let _ = env_logger::init();
 
-    if Command::new("zstdmt").arg("--version").stdout(Stdio::null()).spawn().is_err() {
+    if Command::new("zstdmt").arg("--version").stdout(Stdio::null()).status().is_err() {
         warn!("Can't test zstd as `zstd` is not installed on this system");
         return;
     }

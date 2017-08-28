@@ -156,7 +156,7 @@ fn clone_using_partclone_fstype_variant_ext2() {
 fn clone_and_compress_with_zstd() {
     let _ = env_logger::init();
 
-    if Command::new("zstdmt").arg("--version").stdout(Stdio::null()).spawn().is_err() {
+    if Command::new("zstdmt").arg("--version").stdout(Stdio::null()).status().is_err() {
         warn!("Can't test zstd as `zstdmt` is not installed on this system");
         return;
     }
@@ -189,7 +189,7 @@ fn clone_and_compress_with_zstd() {
 fn clone_and_compress_with_lz4() {
     let _ = env_logger::init();
 
-    if Command::new("lz4").arg("--version").stderr(Stdio::null()).spawn().is_err() {
+    if Command::new("lz4").arg("--version").stderr(Stdio::null()).status().is_err() {
         warn!("Can't test lz4 as `lz4` is not installed on this system");
         return;
     }
