@@ -55,14 +55,20 @@ impl ToYaml for CloneStatus {
         format!("type: clone\n\
                 {common_yaml}\n\
                 complete: {complete}\n\
-                syncing: {syncing}\n\
+                syncing: false\n\
                 rate: {rate}\n\
                 estimated_finish: {finish}",
                 common_yaml = common.to_yaml(),
                 complete = complete_yaml_str(complete),
-                syncing = complete >= 0.9999,
                 rate = rate,
                 finish = estimated_finish)
+      },
+      CloneStatus::Syncing { ref common } => {
+          format!("type: clone\n\
+                  {common_yaml}\n\
+                  complete: 0.9999\n\
+                  syncing: true",
+                  common_yaml = common.to_yaml())
       },
       CloneStatus::Finished { ref finish, ref common, image_size } => {
         format!("type: clone\n\

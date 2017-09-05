@@ -138,7 +138,7 @@ impl Server {
         if let Ok(status) = job.try_recv() {
           self.zmq_send(&status.to_yaml())?;
           match status {
-            CloneStatus::Running{..} => (),
+            CloneStatus::Running{..} | CloneStatus::Syncing{..} => (),
             _ => finished_job_ids.push(id.to_owned())
           }
           did_work = true;

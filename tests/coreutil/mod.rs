@@ -51,6 +51,7 @@ impl Drop for CoreHandle {
 
 fn expect_message_from(socket: &zmq::Socket) -> Yaml {
   let message_str = socket.recv_string(0).expect("expected to receive server message within 1s").unwrap();
+  println!("Received:\n---\n{}\n---", message_str);
   YamlLoader::load_from_str(&message_str).expect("invalid yaml").remove(0)
 }
 

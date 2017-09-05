@@ -8,7 +8,7 @@ use regex::Regex;
 use std::{fmt, fs, str, thread};
 use std::cell::{RefCell, Cell};
 use std::error::Error;
-use std::fs::File;
+use std::fs::{File, Metadata};
 use std::io::{Error as IoError, ErrorKind, Result as IoResult};
 use std::os::unix::io::{FromRawFd, IntoRawFd, RawFd};
 use std::path::Path;
@@ -16,6 +16,7 @@ use std::process::{Child, Command, Stdio};
 use std::sync::mpsc;
 use std::sync::mpsc::Receiver;
 use uuid::Uuid;
+use async;
 
 #[derive(Clone, PartialEq, Debug)]
 pub struct CloneStatusCommon {
@@ -33,6 +34,9 @@ pub enum CloneStatus {
         complete: f64,
         rate: Option<String>,
         estimated_finish: Option<DateTime<Utc>>,
+    },
+    Syncing {
+        common: CloneStatusCommon,
     },
     Finished {
         common: CloneStatusCommon,
@@ -55,8 +59,9 @@ pub struct CloneJob {
     partclone_cmd: RefCell<Child>,
     compress_cmd: RefCell<Child>,
     sent_first_msg: Cell<bool>,
-    partclone_finished: Cell<Option<DateTime<Utc>>>,
     partclone_status: Receiver<PartcloneStatus>,
+    partclone_finished: Cell<bool>,
+    rename_task: RefCell<Option<Receiver<IoResult<Metadata>>>>,
 }
 
 fn destination_raw_fd(dir: &str, name: &str, partclone_variant: &str, z: Compression)
@@ -80,6 +85,7 @@ fn destination_raw_fd(dir: &str, name: &str, partclone_variant: &str, z: Compres
 
 impl CloneJob {
     pub fn try_recv(&self) -> Result<CloneStatus, Box<Error>> {
+
         if !self.sent_first_msg.get() {
             // bosh out an initial running message to show the clone has started
             self.sent_first_msg.set(true);
@@ -91,38 +97,41 @@ impl CloneJob {
             });
         }
 
-        if let Some(finish) = self.partclone_finished.get() {
+        if self.partclone_finished.get() {
             return match self.try_wait() {
                 Ok(Some(_)) => {
-                    if let Err(err) = fs::rename(&self.destination,
-                                                 self.successful_destination()) {
-                        error!("Failed to rename {}: {}", self.destination, err);
-                        Ok(CloneStatus::Failed {
-                            common: self.clone_status_common(),
-                            finish,
-                            reason: format!("Failed to rename {}", self.destination)
-                        })
+                    if self.rename_task.borrow().is_none() {
+                        let from = self.destination.clone();
+                        let to = self.successful_destination().to_owned();
+                        *self.rename_task.borrow_mut() = Some(async::receiver(move|| {
+                            fs::rename(&from, &to)?;
+                            fs::metadata(&to)
+                        }));
                     }
-                    else {
-                        let meta = fs::metadata(self.successful_destination())?;
-                        Ok(CloneStatus::Finished {
-                            common: self.clone_status_common(),
-                            finish,
-                            image_size: meta.len(),
-                        })
+                    match self.rename_task.borrow_mut().as_ref().unwrap().try_recv()? {
+                        Ok(meta) => {
+                            Ok(CloneStatus::Finished {
+                                common: self.clone_status_common(),
+                                finish: Utc::now(),
+                                image_size: meta.len(),
+                            })
+                        },
+                        Err(err) => {
+                            error!("Failed to rename {}: {}", self.destination, err);
+                            Ok(CloneStatus::Failed {
+                                common: self.clone_status_common(),
+                                finish: Utc::now(),
+                                reason: format!("Failed to rename {}", self.destination)
+                            })
+                        }
                     }
                 },
-                Ok(None) => Ok(CloneStatus::Running {
-                    common: self.clone_status_common(),
-                    complete: 0.9999,
-                    rate: None,
-                    estimated_finish: Some(finish),
-                }),
+                Ok(None) => Err("Waiting for commands to finish".into()),
                 Err(err) => {
                     error!("Clone failed: {:?}", err);
                     Ok(CloneStatus::Failed {
                         common: self.clone_status_common(),
-                        finish,
+                        finish: Utc::now(),
                         reason: "Failed".to_owned(),
                     })
                 }
@@ -138,10 +147,9 @@ impl CloneJob {
                     estimated_finish: Some(estimated_finish),
                 }
             },
-            PartcloneStatus::Synced { finish } => {
-                // partclone has finished, need to wait for compress cmd too
-                self.partclone_finished.set(Some(finish));
-                return self.try_recv();
+            PartcloneStatus::Synced { .. } => {
+                self.partclone_finished.set(true);
+                CloneStatus::Syncing { common: self.clone_status_common() }
             },
             PartcloneStatus::Failed { finish } => {
                 CloneStatus::Failed {
@@ -273,7 +281,8 @@ impl CloneJob {
             partclone_status,
             id: Uuid::new_v4(),
             sent_first_msg: Cell::new(false),
-            partclone_finished: Cell::new(None),
+            partclone_finished: Cell::new(false),
+            rename_task: RefCell::new(None),
         })
     }
 }

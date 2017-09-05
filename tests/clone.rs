@@ -18,6 +18,8 @@ use std::process::{Command, Stdio};
 
 #[test]
 fn do_clone_job() {
+    let _ = env_logger::init();
+
   let core = CoreHandle::new().unwrap();
   /// default estimated remaining duration in mock partclone
   let mock_duration = OldDuration::minutes(3) + OldDuration::seconds(2);

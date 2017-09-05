@@ -16,6 +16,7 @@ mod restore;
 mod lsblk;
 mod child;
 mod compression;
+mod async;
 
 use server::Server;
 
