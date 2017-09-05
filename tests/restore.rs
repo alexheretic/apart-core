@@ -4,7 +4,6 @@ extern crate flate2;
 extern crate uuid;
 extern crate zmq;
 extern crate yaml_rust;
-extern crate wait_timeout;
 extern crate chrono;
 mod coreutil;
 

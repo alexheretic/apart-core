@@ -2,7 +2,6 @@
 extern crate json;
 extern crate zmq;
 extern crate yaml_rust;
-extern crate wait_timeout;
 extern crate env_logger;
 extern crate regex;
 extern crate chrono;

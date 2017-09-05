@@ -1,11 +1,9 @@
-use std::process::{Child};
-use wait_timeout::ChildExt;
-use std::time::Duration;
+use std::process::Child;
 
 /// Handle a child process no longer desired running
 pub fn drop_log_errors(cmd: &mut Child, log_name: &str) {
   trace!("drop_log_errors(cmd, {})", log_name);
-  match cmd.wait_timeout(Duration::from_secs(0)) {
+  match cmd.try_wait() {
     Ok(out) => {
       match out {
         None => if let Err(x) = cmd.kill() {
@@ -24,7 +22,7 @@ pub fn drop_log_errors(cmd: &mut Child, log_name: &str) {
       }
     },
     Err(err) => match err.raw_os_error() {
-      Some(10) => debug!("{}.wait_timeout(): {}", log_name, err), // no child process
+      Some(10) => debug!("{}.try_wait(): {}", log_name, err), // no child process
       _ => error!("Failed to get status {}: {}", log_name, err)
     }
   }

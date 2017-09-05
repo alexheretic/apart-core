@@ -55,15 +55,20 @@ impl ToYaml for CloneStatus {
         format!("type: clone\n\
                 {common_yaml}\n\
                 complete: {complete}\n\
+                syncing: {syncing}\n\
                 rate: {rate}\n\
                 estimated_finish: {finish}",
-                common_yaml = common.to_yaml(), complete = complete_yaml_str(complete), rate = rate,
+                common_yaml = common.to_yaml(),
+                complete = complete_yaml_str(complete),
+                syncing = complete >= 0.9999,
+                rate = rate,
                 finish = estimated_finish)
       },
       CloneStatus::Finished { ref finish, ref common, image_size } => {
         format!("type: clone\n\
                 {common_yaml}\n\
                 complete: 1.0\n\
+                syncing: false\n\
                 finish: {finish:?}\n\
                 image_size: {image_size}",
                 common_yaml = common.to_yaml(), finish = finish,
@@ -100,6 +105,7 @@ impl<'a> ToYaml for RestoreStatus<'a> {
         format!("type: restore\n\
                 {common_yaml}\n\
                 complete: 1.0\n\
+                syncing: false\n\
                 finish: {finish:?}",
                 finish = finish, common_yaml = common.to_yaml())
       },

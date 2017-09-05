@@ -2,13 +2,11 @@ extern crate flate2;
 extern crate uuid;
 extern crate zmq;
 extern crate yaml_rust;
-extern crate wait_timeout;
 
 use yaml_rust::{YamlLoader,Yaml};
 use std::process::{Command, Child};
 use std::io::{ErrorKind, Error, Result};
 use std::time::{Duration, Instant};
-use wait_timeout::ChildExt;
 use std::fs;
 use std::path::PathBuf;
 use std::process::Stdio;
@@ -24,7 +22,7 @@ pub struct CoreHandle {
 impl Drop for CoreHandle {
   // clean up started binary
   fn drop(&mut self) {
-    match self.process.wait_timeout(Duration::from_secs(0)) {
+    match self.process.try_wait() {
       Ok(None) => {
         println!("sending kill message to apart-core...");
         // try to send kill message, ignore errors
@@ -36,7 +34,7 @@ impl Drop for CoreHandle {
       _ => ()
     }
 
-    match self.process.wait_timeout(Duration::from_secs(0)) {
+    match self.process.try_wait() {
       Err(err) => match err.raw_os_error() {
         Some(10) => return, // already dead
         _ => println!("ERROR: {}", err) // unknown error

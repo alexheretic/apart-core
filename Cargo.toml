@@ -1,13 +1,12 @@
 [package]
 name = "apart-core"
-version = "0.3.1"
+version = "0.3.2"
 authors = ["Alex Butler <alexheretic@gmail.com>"]
 
 [dependencies]
 zmq = "0.8.2"
 yaml-rust = "0.3"
 log = "0.3"
-wait-timeout = "0.1"
 env_logger = "0.4"
 regex = "0.2"
 chrono = "0.4"
@@ -15,4 +14,5 @@ json = "0.11"
 uuid = { version = "0.5", features = ["v4"] }
 
 [dev-dependencies]
+wait-timeout = "0.1"
 flate2 = "0.2"

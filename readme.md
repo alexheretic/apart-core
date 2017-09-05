@@ -69,6 +69,7 @@ source: /dev/sda1  # requested partition
 destination: /mnt/backups/work-2017-05-03T1020.apt.dd.gz  # backup image file absolute path
 id: 8db93abe  # a uid for this job
 complete: 0.0123  # double [0, 1] where 1.0 => it is complete
+syncing: false  # indicates the transfer is complete the final syncing process has started
 start: 2017-04-18T17:39:01Z  # utc time of start
 
 # [optional fields]
