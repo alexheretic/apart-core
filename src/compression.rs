@@ -53,6 +53,10 @@ impl Compression {
                 return Ok(*z);
             }
         }
+        if file.ends_with(".zstd") {
+            // used as zstd name/extension in v0.2
+            return Ok(ZSTD);
+        }
         Err(format!("Unknown compression used in file `{}`", file))
     }
 
@@ -96,5 +100,14 @@ mod compression_tests {
     fn from_gz_file_name() {
         let z = Compression::from_file_name("some-backup-2017-08-09G1106.apt.f2fs.gz");
         assert_eq!(z, Ok(PIGZ));
+    }
+
+    #[test]
+    fn from_zst_file_name() {
+        let z = Compression::from_file_name("some-backup-2017-08-09G1106.apt.f2fs.zst");
+        assert_eq!(z, Ok(ZSTD));
+        // also support old extension
+        let old_z = Compression::from_file_name("some-backup-2017-08-09G1106.apt.f2fs.zstd");
+        assert_eq!(old_z, Ok(ZSTD));
     }
 }
