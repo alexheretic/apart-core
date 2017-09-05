@@ -23,7 +23,7 @@ const LZ4: Compression = Compression {
     read_args: "-dc",
 };
 const ZSTD: Compression = Compression {
-    name: "zstd",
+    name: "zst",
     command: "zstdmt",
     write_args: "-c",
     read_args: "-dc",

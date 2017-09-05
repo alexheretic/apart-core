@@ -166,10 +166,10 @@ fn clone_and_compress_with_zstd() {
     let clone_msg = format!("type: clone\n\
                           source: /dev/sdb1\n\
                           destination: {destination}\n\
-                          name: zstd_job\n\
-                          compression: zstd", destination = core.tmp_dir());
+                          name: zst_job\n\
+                          compression: zst", destination = core.tmp_dir());
     core.send(&clone_msg);
-    let expected_filename = format!("zstd_job-{}.apt.ext2.zstd", Local::now().format("%Y-%m-%dT%H%M"));
+    let expected_filename = format!("zst_job-{}.apt.ext2.zst", Local::now().format("%Y-%m-%dT%H%M"));
 
     core.set_mock_partclone("ext2", MockPartcloneState::new().complete(1.0).rate("1.23GB/min"))
         .expect("!set_mock_partclone");

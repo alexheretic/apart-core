@@ -186,7 +186,7 @@ compression_options:
 - gz  # default, always available; provided by `pigz` as a required dependency
 - uncompressed # always available
 - lz4  # available if `lz4` is installed
-- zstd  # available if `zstdmt` is installed
+- zst  # available if `zstdmt` is installed
 ```
 To get an updated status message for whatever reason send:
 ```yaml
@@ -216,4 +216,4 @@ Core will cancel all jobs and shutdown (sending the dying status above)
 * partclone
 * pigz
 * lz4 *(optional: adds compression option)*
-* zstd *(optional: adds compression option)*
+* zst *(optional: adds compression option)*

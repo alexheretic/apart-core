@@ -187,7 +187,7 @@ fn restore_zstd_compressed() {
 
     let core = CoreHandle::new().unwrap();
 
-    let source_image = format!("{}/{}", core.tmp_dir(), "mockimg-2017-04-20T1500.apt.ext2.zstd");
+    let source_image = format!("{}/{}", core.tmp_dir(), "mockimg-2017-04-20T1500.apt.ext2.zst");
     let clone_msg = format!("type: restore\n\
                             source: {source}\n\
                             destination: /dev/abc124", source = source_image);
