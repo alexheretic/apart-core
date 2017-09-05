@@ -15,12 +15,12 @@ GUI logic, 'apart presenters', start the core as a running command and communica
 +------------+
 | apart core |
 +------------+
-   + + +
-   | | | subprocess
-   v v v
-+------------------------+
-| partclone, pigz, lsblk |
-+------------------------+
+    + + +
+    | | | subprocess
+    v v v
++------------------------------------------+
+| partclone, lsblk, zstdmt, pigz, lz4, cat |
++------------------------------------------+
 ```
 
 ## Starting

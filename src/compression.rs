@@ -10,18 +10,21 @@ pub struct Compression {
     pub read_args: &'static str,
 }
 
+// ~110 MB/s per core, compression 100->25
 const PIGZ: Compression = Compression {
     name: "gz",
     command: "pigz",
     write_args: "-1c",
     read_args: "-dc",
 };
+// ~1250 MB/s single threaded, compression 100->30
 const LZ4: Compression = Compression {
     name: "lz4",
     command: "lz4",
     write_args: "-c",
     read_args: "-dc",
 };
+// ~450 MB/s per core, compression 100->22
 const ZSTD: Compression = Compression {
     name: "zst",
     command: "zstdmt",
