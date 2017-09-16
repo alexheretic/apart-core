@@ -30,14 +30,40 @@ impl Error for OutputInvalidError {
   fn cause(&self) -> Option<&Error> { None }
 }
 
+fn default_partclone_path() -> Option<&'static str> {
+    for location in &[
+        "/usr/bin/partclone",
+        "/usr/sbin/partclone",
+        "/bin/partclone",
+        "/sbin/partclone",
+        "/usr/local/partclone",
+        "/usr/local/bin/partclone",
+        "/usr/local/sbin/partclone",
+    ] {
+        if Path::new(&format!("{}.dd", location)).exists() {
+            return Some(location);
+        }
+    }
+    None
+}
+
 pub fn cmd(variant: &str) -> Result<String, IoError> {
-  let partclone_cmd = env::var("APART_PARTCLONE_CMD").unwrap_or_else(|_| "/usr/bin/partclone".to_owned());
-  let partclone_dd = format!("{}.{}", partclone_cmd, variant);
-  let cmd_path = Path::new(&partclone_dd);
-  if !cmd_path.exists() {
-    return Err(IoError::new(ErrorKind::NotFound, format!("{} not found", partclone_dd)));
-  }
-  Ok(partclone_dd.to_string())
+    let partclone_cmd = match env::var("APART_PARTCLONE_CMD") {
+        Ok(env_partclone) => Some(format!("{}.{}", env_partclone, variant)),
+        _ => default_partclone_path().map(|path| format!("{}.{}", path, variant)),
+    };
+
+    if partclone_cmd.is_none() {
+        return Err(IoError::new(ErrorKind::NotFound, format!("partclone not found on system")));
+    }
+
+    let partclone_cmd = partclone_cmd.unwrap();
+    if Path::new(&partclone_cmd).exists() {
+        Ok(partclone_cmd)
+    }
+    else {
+        Err(IoError::new(ErrorKind::NotFound, format!("{} not found", partclone_cmd)))
+    }
 }
 
 static PARTCLONE_LOG_TAIL: usize = 4;
