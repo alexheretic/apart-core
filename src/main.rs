@@ -1,11 +1,12 @@
-#[macro_use] extern crate log;
-extern crate json;
-extern crate zmq;
-extern crate yaml_rust;
-extern crate env_logger;
-extern crate regex;
 extern crate chrono;
+extern crate env_logger;
+extern crate json;
+#[macro_use]
+extern crate log;
+extern crate regex;
 extern crate uuid;
+extern crate yaml_rust;
+extern crate zmq;
 
 mod server;
 mod inbound;
@@ -24,14 +25,13 @@ fn main() {
     env_logger::init().unwrap();
 
     match std::env::args().take(2).last() {
-        Some(arg) => {
-            if arg.starts_with("ipc://") {
-                if let Err(err) = Server::start_at(&arg) {
-                    error!("Core failed: {}", err);
-                }
-            } else {
-                print_help();
+        Some(arg) => if arg.starts_with("ipc://") {
+            if let Err(err) = Server::start_at(&arg) {
+                error!("Core failed: {}", err);
             }
+        }
+        else {
+            print_help();
         },
         _ => print_help(),
     }

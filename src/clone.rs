@@ -6,7 +6,7 @@ use partclone;
 use partclone::*;
 use regex::Regex;
 use std::{fmt, fs, str, thread};
-use std::cell::{RefCell, Cell};
+use std::cell::{Cell, RefCell};
 use std::error::Error;
 use std::fs::{File, Metadata};
 use std::io::{Error as IoError, ErrorKind, Result as IoResult};
@@ -35,19 +35,9 @@ pub enum CloneStatus {
         rate: Option<String>,
         estimated_finish: Option<DateTime<Utc>>,
     },
-    Syncing {
-        common: CloneStatusCommon,
-    },
-    Finished {
-        common: CloneStatusCommon,
-        finish: DateTime<Utc>,
-        image_size: u64,
-    },
-    Failed {
-        common: CloneStatusCommon,
-        reason: String,
-        finish: DateTime<Utc>,
-    },
+    Syncing { common: CloneStatusCommon },
+    Finished { common: CloneStatusCommon, finish: DateTime<Utc>, image_size: u64 },
+    Failed { common: CloneStatusCommon, reason: String, finish: DateTime<Utc> },
 }
 
 #[derive(Debug)]
@@ -64,9 +54,12 @@ pub struct CloneJob {
     rename_task: RefCell<Option<Receiver<IoResult<Metadata>>>>,
 }
 
-fn destination_raw_fd(dir: &str, name: &str, partclone_variant: &str, z: Compression)
-    -> IoResult<(String, RawFd)>
-{
+fn destination_raw_fd(
+    dir: &str,
+    name: &str,
+    partclone_variant: &str,
+    z: Compression,
+) -> IoResult<(String, RawFd)> {
     // something like: "/mnt/backups/mypart-2017-01-25T1245.apt.gz.inprogress"
     let file = format!(
         "{directory}/{name}-{timestamp}.apt.{partclone_variant}.{z_name}.inprogress",
@@ -85,7 +78,6 @@ fn destination_raw_fd(dir: &str, name: &str, partclone_variant: &str, z: Compres
 
 impl CloneJob {
     pub fn try_recv(&self) -> Result<CloneStatus, Box<Error>> {
-
         if !self.sent_first_msg.get() {
             // bosh out an initial running message to show the clone has started
             self.sent_first_msg.set(true);
@@ -103,29 +95,27 @@ impl CloneJob {
                     if self.rename_task.borrow().is_none() {
                         let from = self.destination.clone();
                         let to = self.successful_destination().to_owned();
-                        *self.rename_task.borrow_mut() = Some(async::receiver(move|| {
+                        *self.rename_task.borrow_mut() = Some(async::receiver(move || {
                             fs::rename(&from, &to)?;
                             fs::metadata(&to)
                         }));
                     }
                     match self.rename_task.borrow_mut().as_ref().unwrap().try_recv()? {
-                        Ok(meta) => {
-                            Ok(CloneStatus::Finished {
-                                common: self.clone_status_common(),
-                                finish: Utc::now(),
-                                image_size: meta.len(),
-                            })
-                        },
+                        Ok(meta) => Ok(CloneStatus::Finished {
+                            common: self.clone_status_common(),
+                            finish: Utc::now(),
+                            image_size: meta.len(),
+                        }),
                         Err(err) => {
                             error!("Failed to rename {}: {}", self.destination, err);
                             Ok(CloneStatus::Failed {
                                 common: self.clone_status_common(),
                                 finish: Utc::now(),
-                                reason: format!("Failed to rename {}", self.destination)
+                                reason: format!("Failed to rename {}", self.destination),
                             })
                         }
                     }
-                },
+                }
                 Ok(None) => Err("Waiting for commands to finish".into()),
                 Err(err) => {
                     error!("Clone failed: {:?}", err);
@@ -139,24 +129,20 @@ impl CloneJob {
         }
 
         Ok(match self.partclone_status.try_recv()? {
-            PartcloneStatus::Running { rate, estimated_finish, complete, } => {
-                CloneStatus::Running {
-                    common: self.clone_status_common(),
-                    complete: if complete > 0.9999 { 0.9999 } else { complete },
-                    rate: Some(rate),
-                    estimated_finish: Some(estimated_finish),
-                }
+            PartcloneStatus::Running { rate, estimated_finish, complete } => CloneStatus::Running {
+                common: self.clone_status_common(),
+                complete: if complete > 0.9999 { 0.9999 } else { complete },
+                rate: Some(rate),
+                estimated_finish: Some(estimated_finish),
             },
             PartcloneStatus::Synced { .. } => {
                 self.partclone_finished.set(true);
                 CloneStatus::Syncing { common: self.clone_status_common() }
-            },
-            PartcloneStatus::Failed { finish } => {
-                CloneStatus::Failed {
-                    common: self.clone_status_common(),
-                    finish,
-                    reason: "Failed".to_owned(),
-                }
+            }
+            PartcloneStatus::Failed { finish } => CloneStatus::Failed {
+                common: self.clone_status_common(),
+                finish,
+                reason: "Failed".to_owned(),
             },
         })
     }
@@ -164,25 +150,21 @@ impl CloneJob {
     /// Returns `Ok(Some(()))` when both partclone & compress commands have exitted successfully
     fn try_wait(&self) -> (Result<Option<()>, Box<Error>>) {
         let pcl = match self.partclone_cmd.borrow_mut().try_wait() {
-            Ok(Some(status)) => {
-                if status.success() {
-                    Some(())
-                }
-                else {
-                    return Err("Clone failed".into());
-                }
+            Ok(Some(status)) => if status.success() {
+                Some(())
+            }
+            else {
+                return Err("Clone failed".into());
             },
             Ok(None) => None,
             Err(_) => return Err("Clone failed".into()),
         };
         let cmp = match self.compress_cmd.borrow_mut().try_wait() {
-            Ok(Some(status)) => {
-                if status.success() {
-                    Some(())
-                }
-                else {
-                    return Err("Compress failed".into());
-                }
+            Ok(Some(status)) => if status.success() {
+                Some(())
+            }
+            else {
+                return Err("Compress failed".into());
             },
             Ok(None) => None,
             Err(_) => return Err("Compress failed".into()),
@@ -209,7 +191,8 @@ impl CloneJob {
     }
 
     pub fn successful_destination(&self) -> &str {
-        let (without_inprogress, _) = self.destination.split_at(self.destination.len() - ".inprogress".len());
+        let (without_inprogress, _) =
+            self.destination.split_at(self.destination.len() - ".inprogress".len());
         without_inprogress
     }
 
@@ -221,23 +204,27 @@ impl CloneJob {
         }
     }
 
-    pub fn new(source: String, destination: String, name: String, z: Compression) -> IoResult<CloneJob> {
+    pub fn new(
+        source: String,
+        destination: String,
+        name: String,
+        z: Compression,
+    ) -> IoResult<CloneJob> {
         let (partclone_variant, partclone_cmd) = match lsblk::fstype(&source) {
-            Some(fstype) => {
-                match partclone::cmd(&fstype) {
-                    Ok(cmd) => (fstype, cmd),
-                    Err(_) => {
-                        info!("No partclone command found for fstype '{}', using dd...", fstype);
-                        ("dd".to_owned(), partclone::cmd("dd")?)
-                    },
+            Some(fstype) => match partclone::cmd(&fstype) {
+                Ok(cmd) => (fstype, cmd),
+                Err(_) => {
+                    info!("No partclone command found for fstype '{}', using dd...", fstype);
+                    ("dd".to_owned(), partclone::cmd("dd")?)
                 }
             },
             _ => {
                 info!("fstype not found for source '{}', using dd...", source);
                 ("dd".to_owned(), partclone::cmd("dd")?)
-            },
+            }
         };
-        let (dest_file, dest_raw_fd) = destination_raw_fd(&destination, &name, &partclone_variant, z)?;
+        let (dest_file, dest_raw_fd) =
+            destination_raw_fd(&destination, &name, &partclone_variant, z)?;
 
         let mut partclone_cmd = {
             let mut args = Vec::new();
@@ -257,9 +244,9 @@ impl CloneJob {
 
         let compress_cmd = Command::new(z.command)
             .arg(z.write_args)
-            .stdin(unsafe {
-                Stdio::from_raw_fd(partclone_cmd.stdout.take().unwrap().into_raw_fd())
-            })
+            .stdin(
+                unsafe { Stdio::from_raw_fd(partclone_cmd.stdout.take().unwrap().into_raw_fd()) },
+            )
             .stdout(unsafe { Stdio::from_raw_fd(dest_raw_fd) })
             .stderr(Stdio::null())
             .spawn()?;
@@ -308,7 +295,8 @@ impl fmt::Display for CloneJob {
 }
 
 pub fn partclone_variant_from_image(filename: &str) -> Result<String, Box<Error>> {
-    let image_re = Regex::new(r"^.*/?[^/]+-\d{4,}-\d\d-\d\dT\d{4}\.apt\.(.+)\..+$").expect("!image_re");
+    let image_re =
+        Regex::new(r"^.*/?[^/]+-\d{4,}-\d\d-\d\dT\d{4}\.apt\.(.+)\..+$").expect("!image_re");
 
     for caps in image_re.captures_iter(filename) {
         return Ok(caps[1].parse::<String>()?);
@@ -335,8 +323,7 @@ mod tests {
     #[test]
     fn dd_variant_from_image() {
         assert_eq!(
-            partclone_variant_from_image("/mnt/backups/mockimg-2017-04-20T1500.apt.dd.gz")
-                .unwrap(),
+            partclone_variant_from_image("/mnt/backups/mockimg-2017-04-20T1500.apt.dd.gz").unwrap(),
             "dd".to_owned()
         );
     }

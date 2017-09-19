@@ -11,32 +11,16 @@ pub struct Compression {
 }
 
 // ~110 MB/s per core, compression 100->25
-const PIGZ: Compression = Compression {
-    name: "gz",
-    command: "pigz",
-    write_args: "-1c",
-    read_args: "-dc",
-};
+const PIGZ: Compression =
+    Compression { name: "gz", command: "pigz", write_args: "-1c", read_args: "-dc" };
 // ~1250 MB/s single threaded, compression 100->30
-const LZ4: Compression = Compression {
-    name: "lz4",
-    command: "lz4",
-    write_args: "-c",
-    read_args: "-dc",
-};
+const LZ4: Compression =
+    Compression { name: "lz4", command: "lz4", write_args: "-c", read_args: "-dc" };
 // ~450 MB/s per core, compression 100->22
-const ZSTD: Compression = Compression {
-    name: "zst",
-    command: "zstdmt",
-    write_args: "-c",
-    read_args: "-dc",
-};
-const NONE: Compression = Compression {
-    name: "uncompressed",
-    command: "cat",
-    write_args: "-",
-    read_args: "-",
-};
+const ZSTD: Compression =
+    Compression { name: "zst", command: "zstdmt", write_args: "-c", read_args: "-dc" };
+const NONE: Compression =
+    Compression { name: "uncompressed", command: "cat", write_args: "-", read_args: "-" };
 
 const ALL: &[Compression] = &[PIGZ, NONE, ZSTD, LZ4];
 
@@ -74,7 +58,8 @@ impl Compression {
     }
 
     fn is_installed(self) -> bool {
-        match Command::new(self.command).arg("--version")
+        match Command::new(self.command)
+            .arg("--version")
             .stdin(Stdio::null())
             .stdout(Stdio::null())
             .stderr(Stdio::null())
@@ -86,13 +71,15 @@ impl Compression {
                     warn!("Error checking if `{}` is installed: {}", self.command, e);
                 }
                 false
-            },
+            }
         }
     }
 }
 
 impl Default for Compression {
-    fn default() -> Self { PIGZ }
+    fn default() -> Self {
+        PIGZ
+    }
 }
 
 #[cfg(test)]
