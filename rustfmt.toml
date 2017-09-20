@@ -1,0 +1,15 @@
+# rustfmt 0.2.6-nightly
+
+array_width = 100
+chain_one_line_max = 100
+comment_width = 100
+max_width = 100
+fn_call_width = 100
+single_line_if_else_max_width = 100
+struct_lit_width = 100
+struct_variant_width = 100
+take_source_hints = true
+control_brace_style = "ClosingNextLine"
+error_on_line_overflow = false
+# where_layout = "HorizontalVertical"
+where_style = "Legacy"
