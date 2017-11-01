@@ -53,6 +53,7 @@ fn do_clone_job() {
     assert_eq!(msg["complete"].as_f64(), Some(0.0));
     assert_eq!(msg["finish"].as_str(), None);
     assert_eq!(msg["source"].as_str(), Some("/dev/sda5"));
+    assert_eq!(msg["source_uuid"].as_str(), None);
     assert_eq!(
         msg["destination"].as_str(),
         Some(format!("{}/{}", core.tmp_dir(), expected_filename).as_ref())
@@ -293,7 +294,7 @@ fn clone_and_compress_with_lz4() {
 }
 
 #[test]
-fn clone_uncompressed() {
+fn clone_uncompressed_uuid_info() {
     let core = CoreHandle::new().unwrap();
 
     let clone_msg = format!(
@@ -312,6 +313,7 @@ fn clone_uncompressed() {
         .expect("!set_mock_partclone");
     let ref msg = core.expect_message_with(|msg| msg["complete"].as_f64() == Some(1.0));
     assert_eq!(msg["source"].as_str(), Some("/dev/sdb1"));
+    assert_eq!(msg["source_uuid"].as_str(), Some("456-456-456"));
     assert_eq!(
         msg["destination"].as_str(),
         Some(format!("{}/{}", core.tmp_dir(), expected_filename).as_ref())

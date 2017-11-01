@@ -25,6 +25,7 @@ pub struct CloneStatusCommon {
     pub destination: String,
     pub inprogress_destination: String,
     pub start: DateTime<Utc>,
+    pub source_uuid: Option<String>,
 }
 
 #[derive(PartialEq, Debug)]
@@ -46,6 +47,7 @@ pub struct CloneJob {
     destination: String,
     id: Uuid,
     start: DateTime<Utc>,
+    source_uuid: Option<String>,
     partclone_cmd: RefCell<Child>,
     compress_cmd: RefCell<Child>,
     sent_first_msg: Cell<bool>,
@@ -183,6 +185,7 @@ impl CloneJob {
             destination: self.successful_destination().to_owned(),
             inprogress_destination: self.destination.clone(),
             start: self.start,
+            source_uuid: self.source_uuid.clone(),
         }
     }
 
@@ -259,8 +262,11 @@ impl CloneJob {
                 warn!("partclone::read_output failed: {}", e);
             })?;
 
+        let source_uuid = lsblk::uuid(&source);
+
         Ok(CloneJob {
             source,
+            source_uuid,
             destination: dest_file,
             start: Utc::now(),
             partclone_cmd: RefCell::new(partclone_cmd),

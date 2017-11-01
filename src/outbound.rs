@@ -38,8 +38,16 @@ fn complete_yaml_str(complete: f64) -> String {
 
 impl ToYaml for CloneStatusCommon {
     fn to_yaml(&self) -> String {
-        let &CloneStatusCommon { start, ref source, ref destination, ref id, .. } = self;
-        common_yaml(start, source, destination, id)
+        let &CloneStatusCommon {
+            start, ref source, ref destination, ref id, ref source_uuid, ..
+        } = self;
+        let mut yaml = common_yaml(start, source, destination, id);
+        if let Some(ref uuid) = *source_uuid {
+            yaml.push('\n');
+            yaml.push_str("source_uuid: ");
+            yaml.push_str(uuid);
+        }
+        yaml
     }
 }
 
@@ -169,12 +177,13 @@ pub fn status_yaml(status: &str, lsblk: Vec<JsonValue>) -> String {
 
                     let mut parts = yaml::Array::new();
                     for p in children {
-                        if let (Some(name), Some(size), fstype, label, mountpoint) = (
+                        if let (Some(name), Some(size), fstype, label, mountpoint, uuid) = (
                             p["name"].as_str(),
                             p["size"].as_str(),
                             p["fstype"].as_str(),
                             p["label"].as_str(),
                             p["mountpoint"].as_str(),
+                            p["uuid"].as_str(),
                         ) {
                             let mut part = yaml::Hash::new();
                             part.insert(Yaml::from_str("name"), Yaml::from_str(name));
@@ -188,6 +197,9 @@ pub fn status_yaml(status: &str, lsblk: Vec<JsonValue>) -> String {
                             }
                             if let Some(l) = label {
                                 part.insert(Yaml::from_str("label"), Yaml::from_str(l));
+                            }
+                            if let Some(id) = uuid {
+                                part.insert(Yaml::from_str("uuid"), Yaml::from_str(id));
                             }
 
                             parts.push(Yaml::Hash(part));
@@ -287,6 +299,7 @@ mod tests {
                 inprogress_destination: "/mnt/backups/ars2.gz.inprogress".to_owned(),
                 start: Utc.ymd(2017, 4, 18).and_hms(15, 44, 12),
                 id: "some-id".to_owned(),
+                source_uuid: Some("123-234-345".to_owned()),
             },
             estimated_finish: Some(Utc.ymd(2017, 4, 18).and_hms(15, 45, 00)),
             complete: 0.123,
@@ -300,6 +313,7 @@ mod tests {
         assert_eq!(yaml["start"].as_str(), Some("2017-04-18T15:44:12Z"));
         assert_eq!(yaml["source"].as_str(), Some("/dev/ars2"));
         assert_eq!(yaml["destination"].as_str(), Some("/mnt/backups/ars2.gz"));
+        assert_eq!(yaml["source_uuid"].as_str(), Some("123-234-345"));
     }
 
     #[test]
@@ -339,6 +353,7 @@ mod tests {
                 inprogress_destination: "/mnt/backups/ars2.gz.inprogress".to_owned(),
                 start: Utc.ymd(2017, 4, 18).and_hms(15, 44, 12),
                 id: "some-id".to_owned(),
+                source_uuid: None,
             },
             estimated_finish: None,
             complete: 0.123,
@@ -358,6 +373,7 @@ mod tests {
                 inprogress_destination: "/mnt/backups/ars2.gz.inprogress".to_owned(),
                 start: Utc.ymd(2017, 4, 18).and_hms(15, 44, 12),
                 id: "some-id".to_owned(),
+                source_uuid: None,
             },
             finish: Utc.ymd(2017, 4, 18).and_hms(15, 45, 34),
             image_size: 123123,
@@ -403,6 +419,7 @@ mod tests {
                 inprogress_destination: "/mnt/backups/ars2.gz.inprogress".to_owned(),
                 start: Utc.ymd(2017, 4, 18).and_hms(15, 44, 12),
                 id: "some-id".to_owned(),
+                source_uuid: None,
             },
             finish: Utc.ymd(2017, 4, 18).and_hms(15, 45, 34),
             reason: "something went wrong".to_owned(),
@@ -425,6 +442,7 @@ mod tests {
                 inprogress_destination: "/mnt/backups/ars2.gz.inprogress".to_owned(),
                 start: Utc.ymd(2017, 4, 18).and_hms(15, 44, 12),
                 id: "some-id".to_owned(),
+                source_uuid: None,
             },
             estimated_finish: Some(Utc.ymd(2017, 4, 18).and_hms(15, 45, 00)),
             complete: 1.0,
@@ -439,6 +457,7 @@ mod tests {
                 inprogress_destination: "/mnt/backups/ars2.gz.inprogress".to_owned(),
                 start: Utc.ymd(2017, 4, 18).and_hms(15, 44, 12),
                 id: "some-id".to_owned(),
+                source_uuid: None,
             },
             estimated_finish: Some(Utc.ymd(2017, 4, 18).and_hms(15, 45, 00)),
             complete: 0.0,

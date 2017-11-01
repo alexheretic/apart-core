@@ -12,6 +12,17 @@ use std::time::Duration;
 use wait_timeout::ChildExt;
 use yaml_rust::Yaml;
 
+macro_rules! assert_partition {
+    ($part:expr, $expected:expr) => {{
+        assert_eq!($part["name"].as_str(), Some($expected.name));
+        assert_eq!($part["size"].as_i64(), Some($expected.size));
+        assert_eq!($part["fstype"].as_str(), $expected.fstype);
+        assert_eq!($part["label"].as_str(), $expected.label);
+        assert_eq!($part["mounted"].as_bool(), Some($expected.mounted));
+        assert_eq!($part["uuid"].as_str(), $expected.uuid);
+    }}
+}
+
 // Tests asserting from a client's perspective
 
 #[test]
@@ -24,7 +35,7 @@ fn initial_status_message() {
     assert_eq!(sda["name"].as_str(), Some("sda"));
     assert_eq!(sda["size"].as_i64(), Some(750_156_374_016));
 
-    assert_partition(
+    assert_partition!(
         &sda["parts"][0],
         PartitionExpectation {
             name: "sda1",
@@ -32,9 +43,10 @@ fn initial_status_message() {
             fstype: Some("ntfs"),
             label: Some("System Reserved"),
             mounted: false,
-        },
+            uuid: Some("123-123-123"),
+        }
     );
-    assert_partition(
+    assert_partition!(
         &sda["parts"][1],
         PartitionExpectation {
             name: "sda2",
@@ -42,9 +54,10 @@ fn initial_status_message() {
             fstype: Some("ntfs"),
             label: Some("SSD"),
             mounted: false,
-        },
+            uuid: Some("234-234-234"),
+        }
     );
-    assert_partition(
+    assert_partition!(
         &sda["parts"][2],
         PartitionExpectation {
             name: "sda3",
@@ -52,9 +65,10 @@ fn initial_status_message() {
             fstype: Some("ext4"),
             label: Some("Arch"),
             mounted: true,
-        },
+            uuid: Some("345-345-345"),
+        }
     );
-    assert_partition(
+    assert_partition!(
         &sda["parts"][3],
         PartitionExpectation {
             name: "sda4",
@@ -62,9 +76,10 @@ fn initial_status_message() {
             fstype: None,
             label: None,
             mounted: false,
-        },
+            uuid: None,
+        }
     );
-    assert_partition(
+    assert_partition!(
         &sda["parts"][4],
         PartitionExpectation {
             name: "sda5",
@@ -72,14 +87,15 @@ fn initial_status_message() {
             fstype: None,
             label: None,
             mounted: false,
-        },
+            uuid: None,
+        }
     );
 
     let sdb = &core.initial_message["sources"][1];
     assert_eq!(sdb["name"].as_str(), Some("sdb"));
     assert_eq!(sdb["size"].as_i64(), Some(62109253632));
 
-    assert_partition(
+    assert_partition!(
         &sdb["parts"][0],
         PartitionExpectation {
             name: "sdb1",
@@ -87,9 +103,10 @@ fn initial_status_message() {
             fstype: Some("ext2"),
             label: Some("boot"),
             mounted: false,
-        },
+            uuid: Some("456-456-456"),
+        }
     );
-    assert_partition(
+    assert_partition!(
         &sdb["parts"][1],
         PartitionExpectation {
             name: "sdb2",
@@ -97,9 +114,10 @@ fn initial_status_message() {
             fstype: Some("swap"),
             label: Some("swap"),
             mounted: false,
-        },
+            uuid: Some("567-567-567"),
+        }
     );
-    assert_partition(
+    assert_partition!(
         &sdb["parts"][2],
         PartitionExpectation {
             name: "sdb3",
@@ -107,7 +125,8 @@ fn initial_status_message() {
             fstype: Some("f2fs"),
             label: Some("main"),
             mounted: false,
-        },
+            uuid: Some("678-678-678"),
+        }
     );
 
     let compression_options = &core.initial_message["compression_options"];
@@ -126,7 +145,7 @@ fn status_request() {
     assert_eq!(sda["name"].as_str(), Some("sda"));
     assert_eq!(sda["size"].as_i64(), Some(750156374016));
 
-    assert_partition(
+    assert_partition!(
         &sda["parts"][4],
         PartitionExpectation {
             name: "sda5",
@@ -134,7 +153,8 @@ fn status_request() {
             fstype: None,
             label: None,
             mounted: false,
-        },
+            uuid: None,
+        }
     );
 }
 
@@ -159,12 +179,5 @@ struct PartitionExpectation {
     fstype: Option<&'static str>,
     label: Option<&'static str>,
     mounted: bool,
-}
-
-fn assert_partition(part: &Yaml, expected: PartitionExpectation) {
-    assert_eq!(part["name"].as_str(), Some(expected.name));
-    assert_eq!(part["size"].as_i64(), Some(expected.size));
-    assert_eq!(part["fstype"].as_str(), expected.fstype);
-    assert_eq!(part["label"].as_str(), expected.label);
-    assert_eq!(part["mounted"].as_bool(), Some(expected.mounted));
+    uuid: Option<&'static str>,
 }

@@ -73,6 +73,7 @@ syncing: false  # indicates the transfer is complete the final syncing process h
 start: 2017-04-18T17:39:01Z  # utc time of start
 
 # [optional fields]
+source_uuid: 32b35cf2-052b-4a31-8f3b-c3e4bfeaa689  # partition UUID if available
 rate: 9.87GB/min  # string describing the rate the job is currently enjoying, present when available
 estimated_finish: 2017-04-18T17:40:03Z  # zoned time of estimated finish, present when available
 
@@ -180,6 +181,8 @@ sources:
     size: 181070200832  # size of partition in bytes
     mounted: true  # indicates if the partition is currently mounted
     label: Arch  # [optional] partition label
+    fstype: ext4  # [optional] file system
+    uuid: c699a42a-d91b-4b1d-9cc7-ddd6b40a08a2  # [optional] unique id
   - name: sda2
     size: 32212254720
     mounted: false
