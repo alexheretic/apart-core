@@ -124,7 +124,7 @@ use flate2::read::GzDecoder;
 use std::io::{Read, Result};
 
 fn decompress_gz(zipped: &[u8]) -> Result<String> {
-    let mut d = GzDecoder::new(zipped)?;
+    let mut d = GzDecoder::new(zipped);
     let mut s = String::new();
     d.read_to_string(&mut s)?;
     Ok(s)
