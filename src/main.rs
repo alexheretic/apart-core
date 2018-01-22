@@ -22,7 +22,7 @@ mod async;
 use server::Server;
 
 fn main() {
-    env_logger::init().unwrap();
+    env_logger::init();
 
     match std::env::args().take(2).last() {
         Some(arg) => if arg.starts_with("ipc://") {

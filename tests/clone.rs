@@ -19,7 +19,7 @@ use std::process::{Command, Stdio};
 
 #[test]
 fn do_clone_job() {
-    let _ = env_logger::init();
+    let _ = env_logger::try_init();
 
     let core = CoreHandle::new().unwrap();
     /// default estimated remaining duration in mock partclone
@@ -205,7 +205,7 @@ fn clone_using_partclone_fstype_variant_ext2() {
 
 #[test]
 fn clone_and_compress_with_zstd() {
-    let _ = env_logger::init();
+    let _ = env_logger::try_init();
 
     if Command::new("zstdmt").arg("--version").stdout(Stdio::null()).status().is_err() {
         warn!("Can't test zstd as `zstdmt` is not installed on this system");
@@ -250,7 +250,7 @@ fn clone_and_compress_with_zstd() {
 
 #[test]
 fn clone_and_compress_with_lz4() {
-    let _ = env_logger::init();
+    let _ = env_logger::try_init();
 
     if Command::new("lz4").arg("--version").stderr(Stdio::null()).status().is_err() {
         warn!("Can't test lz4 as `lz4` is not installed on this system");

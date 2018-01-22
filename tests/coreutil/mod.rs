@@ -6,7 +6,7 @@ extern crate zmq;
 use std::fs;
 use std::io::{Error, ErrorKind, Result};
 use std::io::{Read, Write};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::{Child, Command};
 use std::process::Stdio;
 use std::time::{Duration, Instant};
@@ -138,7 +138,13 @@ impl CoreHandle {
 
         let tmp_dir = TmpDir::new(&uuid);
 
-        let core = Command::new("target/debug/apart-core")
+        // support running in workspace mode too
+        let path = ["target/debug/apart-core", "../target/debug/apart-core"].iter()
+            .map(Path::new)
+            .find(|p| p.is_file())
+            .expect("`debug/apart-core` not found");
+
+        let core = Command::new(path)
             .stdin(Stdio::null())
             .stdout(Stdio::null())
             .stderr(Stdio::inherit())
