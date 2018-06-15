@@ -209,8 +209,8 @@ impl CloneJob {
 
     pub fn new(
         source: String,
-        destination: String,
-        name: String,
+        destination: &str,
+        name: &str,
         z: Compression,
     ) -> IoResult<CloneJob> {
         let (partclone_variant, partclone_cmd) = match lsblk::fstype(&source) {
@@ -304,7 +304,7 @@ pub fn partclone_variant_from_image(filename: &str) -> Result<String, Box<Error>
     let image_re =
         Regex::new(r"^.*/?[^/]+-\d{4,}-\d\d-\d\dT\d{4}\.apt\.(.+)\..+$").expect("!image_re");
 
-    for caps in image_re.captures_iter(filename) {
+    if let Some(caps) = image_re.captures_iter(filename).next() {
         return Ok(caps[1].parse::<String>()?);
     }
     Err(Box::new(OutputInvalidError(format!("Invalid image file: {}", filename))))

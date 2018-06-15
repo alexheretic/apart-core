@@ -43,7 +43,7 @@ impl Server {
 
         let (io_master_sender, io_receiver) = channel();
         let mut server = Server {
-            socket: socket,
+            socket,
             clones: HashMap::new(),
             restores: HashMap::new(),
             io_receiver,
@@ -56,7 +56,7 @@ impl Server {
     fn zmq_send(&self, msg: &str) -> Result<(), Box<Error>> {
         match self.socket.send_str(msg, 0) {
             Err(x) => Err(Box::new(x)),
-            Ok(x) => Ok(x),
+            Ok(_) => Ok(()),
         }
     }
 
@@ -74,7 +74,7 @@ impl Server {
                             return Ok(());
                         }
                         Some(CloneRequest { source, destination, name, compression }) => {
-                            match CloneJob::new(source, destination, name, compression) {
+                            match CloneJob::new(source, &destination, &name, compression) {
                                 Ok(job) => {
                                     info!("Starting new job: {}", job);
                                     self.clones.insert(job.id().to_owned(), job);

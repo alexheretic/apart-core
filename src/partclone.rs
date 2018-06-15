@@ -58,7 +58,7 @@ pub fn cmd(variant: &str) -> Result<String, IoError> {
     };
 
     if partclone_cmd.is_none() {
-        return Err(IoError::new(ErrorKind::NotFound, format!("partclone not found on system")));
+        return Err(IoError::new(ErrorKind::NotFound, "partclone not found on system".to_owned()));
     }
 
     let partclone_cmd = partclone_cmd.unwrap();
