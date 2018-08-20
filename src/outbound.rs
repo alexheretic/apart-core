@@ -275,16 +275,16 @@ mod tests {
 
         let sda = &yaml["sources"][0];
         assert_eq!(sda["name"].as_str(), Some("sda"));
-        assert_eq!(sda["size"].as_i64(), Some(750156374016));
+        assert_eq!(sda["size"].as_i64(), Some(750_156_374_016));
 
         assert_eq!(sda["parts"][0]["name"].as_str(), Some("sda2"));
-        assert_eq!(sda["parts"][0]["size"].as_i64(), Some(536766054400));
+        assert_eq!(sda["parts"][0]["size"].as_i64(), Some(536_766_054_400));
         assert_eq!(sda["parts"][0]["fstype"].as_str(), None, "sda2.fstype");
         assert_eq!(sda["parts"][0]["label"].as_str(), None, "sda2.label");
         assert_eq!(sda["parts"][0]["mounted"].as_bool(), Some(false), "sda2.mounted");
 
         assert_eq!(sda["parts"][1]["name"].as_str(), Some("sda3"));
-        assert_eq!(sda["parts"][1]["size"].as_i64(), Some(181070200832));
+        assert_eq!(sda["parts"][1]["size"].as_i64(), Some(181_070_200_832));
         assert_eq!(sda["parts"][1]["fstype"].as_str(), Some("ext4"));
         assert_eq!(sda["parts"][1]["label"].as_str(), Some("Arch"));
         assert_eq!(sda["parts"][1]["mounted"].as_bool(), Some(true), "sda3.mounted");
@@ -376,7 +376,7 @@ mod tests {
                 source_uuid: None,
             },
             finish: Utc.ymd(2017, 4, 18).and_hms(15, 45, 34),
-            image_size: 123123,
+            image_size: 123_123,
         }.to_yaml();
         let yaml = YamlLoader::load_from_str(&yaml_str).unwrap().remove(0);
         assert_eq!(yaml["type"].as_str(), Some("clone"));
@@ -386,7 +386,7 @@ mod tests {
         assert_eq!(yaml["finish"].as_str(), Some("2017-04-18T15:45:34Z"));
         assert_eq!(yaml["source"].as_str(), Some("/dev/ars3"));
         assert_eq!(yaml["destination"].as_str(), Some("/mnt/backups/ars3.gz"));
-        assert_eq!(yaml["image_size"].as_i64(), Some(123123));
+        assert_eq!(yaml["image_size"].as_i64(), Some(123_123));
     }
 
     #[test]

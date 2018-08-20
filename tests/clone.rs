@@ -22,7 +22,7 @@ fn do_clone_job() {
     let _ = env_logger::try_init();
 
     let core = CoreHandle::new().unwrap();
-    /// default estimated remaining duration in mock partclone
+    // default estimated remaining duration in mock partclone
     let mock_duration = OldDuration::minutes(3) + OldDuration::seconds(2);
 
     let clone_msg = format!(
@@ -38,13 +38,13 @@ fn do_clone_job() {
     let expected_filename =
         format!("do_clone_job-{}.apt.dd.gz", Local::now().format("%Y-%m-%dT%H%M"));
 
-    let ref msg = core.expect_message_with(|msg| msg["type"].as_str() == Some("clone"));
+    let msg = core.expect_message_with(|msg| msg["type"].as_str() == Some("clone"));
     let id = msg["id"].as_str();
     let start = msg["start"].as_str();
     // ensure we get a timely initial message not waiting for partclone rate/estimated remaining
     assert!(Utc::now().signed_duration_since(send_time) <= OldDuration::milliseconds(500));
 
-    let ref msg = core.expect_message_with(
+    let msg = core.expect_message_with(
         |msg| msg["type"].as_str() == Some("clone") && msg["rate"].as_str().is_some(),
     );
 
@@ -71,7 +71,7 @@ fn do_clone_job() {
 
     core.set_mock_partclone("dd", MockPartcloneState::new().complete(0.5634).rate("0.01GB/min"))
         .expect("!set_mock_partclone");
-    let ref msg = core.expect_message_with(|msg| msg["complete"].as_f64() == Some(0.5634));
+    let msg = core.expect_message_with(|msg| msg["complete"].as_f64() == Some(0.5634));
     let expected_estimated_finished_time = Utc::now() + mock_duration;
 
     assert_eq!(msg["id"].as_str(), id);
@@ -97,7 +97,7 @@ fn do_clone_job() {
 
     core.set_mock_partclone("dd", MockPartcloneState::new().complete(1.0).rate("12.23GB/min"))
         .expect("!set_mock_partclone");
-    let ref msg = core.expect_message_with(|msg| msg["complete"].as_f64() == Some(1.0));
+    let msg = core.expect_message_with(|msg| msg["complete"].as_f64() == Some(1.0));
     assert_eq!(msg["id"].as_str(), id);
     assert_eq!(msg["start"].as_str(), start);
     assert!(msg["finish"].as_str().is_some(), "missing clone.finish");
@@ -146,7 +146,7 @@ fn clone_using_partclone_fstype_variant_f2fs() {
         format!("f2fs_job-{}.apt.f2fs.gz", Local::now().format("%Y-%m-%dT%H%M"));
     core.set_mock_partclone("f2fs", MockPartcloneState::new().complete(1.0).rate("1.23GB/min"))
         .expect("!set_mock_partclone");
-    let ref msg = core.expect_message_with(|msg| msg["complete"].as_f64() == Some(1.0));
+    let msg = core.expect_message_with(|msg| msg["complete"].as_f64() == Some(1.0));
     assert_eq!(msg["source"].as_str(), Some("/dev/sdb3"));
     assert_eq!(
         msg["destination"].as_str(),
@@ -183,7 +183,7 @@ fn clone_using_partclone_fstype_variant_ext2() {
 
     core.set_mock_partclone("ext2", MockPartcloneState::new().complete(1.0).rate("1.23GB/min"))
         .expect("!set_mock_partclone");
-    let ref msg = core.expect_message_with(|msg| msg["complete"].as_f64() == Some(1.0));
+    let msg = core.expect_message_with(|msg| msg["complete"].as_f64() == Some(1.0));
     assert_eq!(msg["source"].as_str(), Some("/dev/sdb1"));
     assert_eq!(
         msg["destination"].as_str(),
@@ -228,7 +228,7 @@ fn clone_and_compress_with_zstd() {
 
     core.set_mock_partclone("ext2", MockPartcloneState::new().complete(1.0).rate("1.23GB/min"))
         .expect("!set_mock_partclone");
-    let ref msg = core.expect_message_with(|msg| msg["complete"].as_f64() == Some(1.0));
+    let msg = core.expect_message_with(|msg| msg["complete"].as_f64() == Some(1.0));
     assert_eq!(msg["source"].as_str(), Some("/dev/sdb1"));
     assert_eq!(
         msg["destination"].as_str(),
@@ -273,7 +273,7 @@ fn clone_and_compress_with_lz4() {
 
     core.set_mock_partclone("ext2", MockPartcloneState::new().complete(1.0).rate("1.23GB/min"))
         .expect("!set_mock_partclone");
-    let ref msg = core.expect_message_with(|msg| msg["complete"].as_f64() == Some(1.0));
+    let msg = core.expect_message_with(|msg| msg["complete"].as_f64() == Some(1.0));
     assert_eq!(msg["source"].as_str(), Some("/dev/sdb1"));
     assert_eq!(
         msg["destination"].as_str(),
@@ -311,7 +311,7 @@ fn clone_uncompressed_uuid_info() {
 
     core.set_mock_partclone("ext2", MockPartcloneState::new().complete(1.0).rate("1.23GB/min"))
         .expect("!set_mock_partclone");
-    let ref msg = core.expect_message_with(|msg| msg["complete"].as_f64() == Some(1.0));
+    let msg = core.expect_message_with(|msg| msg["complete"].as_f64() == Some(1.0));
     assert_eq!(msg["source"].as_str(), Some("/dev/sdb1"));
     assert_eq!(msg["source_uuid"].as_str(), Some("456-456-456"));
     assert_eq!(
@@ -346,14 +346,14 @@ fn handle_partclone_rate_output() {
     core.send(&clone_msg);
     core.set_mock_partclone("ext2", MockPartcloneState::new().complete(0.5).rate("1.23GB/min"))
         .expect("!set_mock_partclone");
-    let ref msg = core.expect_message_with(|msg| msg["complete"].as_f64() == Some(0.5));
+    let msg = core.expect_message_with(|msg| msg["complete"].as_f64() == Some(0.5));
     assert_eq!(msg["rate"].as_str(), Some("1.23GB/min"));
     // Partclone can output the rate with and without the 'Rate: ' prefix
     core.set_mock_partclone(
         "ext2",
         MockPartcloneState::new().complete(0.6).rate("Rate: 2.34GB/min"),
     ).expect("!set_mock_partclone");
-    let ref msg = core.expect_message_with(|msg| msg["complete"].as_f64() != Some(0.5));
+    let msg = core.expect_message_with(|msg| msg["complete"].as_f64() != Some(0.5));
     assert_eq!(msg["rate"].as_str(), Some("2.34GB/min"));
 }
 
@@ -370,7 +370,7 @@ fn cancel_clone_job() {
     );
     core.send(&clone_msg);
 
-    let ref msg = core.expect_message_with(
+    let msg = core.expect_message_with(
         |msg| msg["type"].as_str() == Some("clone") && msg["rate"].as_str().is_some(),
     );
     let id = msg["id"].as_str();
@@ -379,7 +379,7 @@ fn cancel_clone_job() {
     core.set_mock_partclone("dd", MockPartcloneState::new().complete(0.7865).rate("9.00GB/min"))
         .expect("!set_mock_partclone");
 
-    let ref msg = core.expect_message_with(|msg| msg["rate"].as_str() == Some("9.00GB/min"));
+    let msg = core.expect_message_with(|msg| msg["rate"].as_str() == Some("9.00GB/min"));
     assert_eq!(msg["id"].as_str(), id);
 
     let inprogress_path = format!("{}.inprogress", destination);
@@ -388,7 +388,7 @@ fn cancel_clone_job() {
     let cancel_msg = format!("type: cancel-clone\nid: {id}", id = id.unwrap());
     core.send(&cancel_msg);
 
-    let ref msg = core.expect_message_with(|msg| msg["type"].as_str() == Some("clone-failed"));
+    let msg = core.expect_message_with(|msg| msg["type"].as_str() == Some("clone-failed"));
     assert_eq!(msg["id"].as_str(), id);
     assert_eq!(msg["error"].as_str(), Some("Cancelled"));
 
@@ -424,7 +424,7 @@ fn clone_job_error() {
     );
     core.send(&clone_msg);
 
-    let ref msg = core.expect_message_with(
+    let msg = core.expect_message_with(
         |msg| msg["type"].as_str() == Some("clone") && msg["rate"].as_str().is_some(),
     );
     let id = msg["id"].as_str();
@@ -435,7 +435,7 @@ fn clone_job_error() {
         MockPartcloneState::new().complete(0.7865).rate("9.00GB/min").error(true),
     ).expect("!set_mock_partclone");
 
-    let ref msg = core.expect_message_with(|msg| msg["type"].as_str() == Some("clone-failed"));
+    let msg = core.expect_message_with(|msg| msg["type"].as_str() == Some("clone-failed"));
     assert_eq!(msg["id"].as_str(), id);
     assert_eq!(msg["error"].as_str(), Some("Failed"));
 
@@ -469,7 +469,7 @@ fn delete_image() {
         image
     );
     core.send(&clone_msg);
-    let ref msg = core.expect_message_with(|msg| msg["type"].as_str() == Some("deleted-clone"));
+    let msg = core.expect_message_with(|msg| msg["type"].as_str() == Some("deleted-clone"));
     assert_eq!(msg["file"].as_str().unwrap(), image);
     assert!(!Path::new(&image).exists(), "image not actually deleted");
 }
@@ -486,7 +486,7 @@ fn delete_image_not_found() {
         image
     );
     core.send(&clone_msg);
-    let ref msg =
+    let msg =
         core.expect_message_with(|msg| msg["type"].as_str() == Some("delete-clone-failed"));
     assert_eq!(msg["file"].as_str().unwrap(), image);
     assert_eq!(msg["error"].as_str(), Some("No such file"));

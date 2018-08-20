@@ -1,3 +1,5 @@
+#![allow(unused)]
+
 extern crate flate2;
 extern crate uuid;
 extern crate yaml_rust;
@@ -7,8 +9,8 @@ use std::fs;
 use std::io::{Error, ErrorKind, Result};
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
-use std::process::{Child, Command};
 use std::process::Stdio;
+use std::process::{Child, Command};
 use std::time::{Duration, Instant};
 use yaml_rust::{Yaml, YamlLoader};
 
@@ -22,18 +24,12 @@ pub struct CoreHandle {
 impl Drop for CoreHandle {
     // clean up started binary
     fn drop(&mut self) {
-        match self.process.try_wait() {
-            Ok(None) => {
-                println!("sending kill message to apart-core...");
-                // try to send kill message, ignore errors
-                match self.socket.send_str("type: kill-request", 0) {
-                    Ok(_) => match self.socket.recv_string(0) {
-                        _ => (),
-                    },
-                    _ => (),
-                };
-            }
-            _ => (),
+        if let Ok(None) = self.process.try_wait() {
+            println!("sending kill message to apart-core...");
+            // try to send kill message, ignore errors
+            if self.socket.send_str("type: kill-request", 0).is_ok() {
+                let _ = self.socket.recv_string(0);
+            };
         }
 
         match self.process.try_wait() {
@@ -52,10 +48,14 @@ impl Drop for CoreHandle {
 }
 
 fn expect_message_from(socket: &zmq::Socket) -> Yaml {
-    let message_str =
-        socket.recv_string(0).expect("expected to receive server message within 1s").unwrap();
+    let message_str = socket
+        .recv_string(0)
+        .expect("expected to receive server message within 1s")
+        .unwrap();
     println!("Received:\n---\n{}\n---", message_str);
-    YamlLoader::load_from_str(&message_str).expect("invalid yaml").remove(0)
+    YamlLoader::load_from_str(&message_str)
+        .expect("invalid yaml")
+        .remove(0)
 }
 
 struct TmpDir {
@@ -75,11 +75,21 @@ impl TmpDir {
         {
             fs::copy(
                 &file_path,
-                format!("{}/{}", &tmp_dir, &file_path.file_name().unwrap().to_str().unwrap()),
+                format!(
+                    "{}/{}",
+                    &tmp_dir,
+                    &file_path.file_name().unwrap().to_str().unwrap()
+                ),
             ).expect("copy failed");
         }
 
-        TmpDir { dir: fs::canonicalize(tmp_dir).unwrap().into_os_string().into_string().unwrap() }
+        TmpDir {
+            dir: fs::canonicalize(tmp_dir)
+                .unwrap()
+                .into_os_string()
+                .into_string()
+                .unwrap(),
+        }
     }
 
     fn existing_path_of(&self, filename: &str) -> Result<PathBuf> {
@@ -87,7 +97,10 @@ impl TmpDir {
         let mut control_path = PathBuf::new();
         control_path.push(&file);
         if !control_path.exists() {
-            return Err(Error::new(ErrorKind::NotFound, format!("{} not found", file)));
+            return Err(Error::new(
+                ErrorKind::NotFound,
+                format!("{} not found", file),
+            ));
         }
         Ok(control_path)
     }
@@ -108,7 +121,11 @@ pub struct MockPartcloneState {
 
 impl MockPartcloneState {
     pub fn new() -> MockPartcloneState {
-        MockPartcloneState { complete: 0.0, rate: "1.11GB/min".to_owned(), error: false }
+        MockPartcloneState {
+            complete: 0.0,
+            rate: "1.11GB/min".to_owned(),
+            error: false,
+        }
     }
     pub fn complete(&mut self, complete: f64) -> &mut MockPartcloneState {
         self.complete = complete;
@@ -139,7 +156,8 @@ impl CoreHandle {
         let tmp_dir = TmpDir::new(&uuid);
 
         // support running in workspace mode too
-        let path = ["target/debug/apart-core", "../target/debug/apart-core"].iter()
+        let path = ["target/debug/apart-core", "../target/debug/apart-core"]
+            .iter()
             .map(Path::new)
             .find(|p| p.is_file())
             .expect("`debug/apart-core` not found");
@@ -157,9 +175,9 @@ impl CoreHandle {
         let message = expect_message_from(&socket);
         Ok(CoreHandle {
             process: core,
-            socket: socket,
+            socket,
             initial_message: message,
-            tmp_dir: tmp_dir,
+            tmp_dir,
         })
     }
 
@@ -167,9 +185,9 @@ impl CoreHandle {
         expect_message_from(&self.socket)
     }
 
-
     pub fn expect_message_with<P>(&self, predicate: P) -> Yaml
-        where P: Fn(&Yaml) -> bool
+    where
+        P: Fn(&Yaml) -> bool,
     {
         let start = Instant::now();
         loop {
@@ -186,13 +204,19 @@ impl CoreHandle {
     }
 
     pub fn send(&self, msg: &str) {
-        self.socket.send_str(msg, 0).expect("sending to core failed");
+        self.socket
+            .send_str(msg, 0)
+            .expect("sending to core failed");
     }
 
     pub fn set_mock_partclone(
         &self,
         variant: &str,
-        &MockPartcloneState { complete, ref rate, error }: &MockPartcloneState,
+        &MockPartcloneState {
+            complete,
+            ref rate,
+            error,
+        }: &MockPartcloneState,
     ) -> Result<()> {
         let mut file = fs::OpenOptions::new()
             .write(true)

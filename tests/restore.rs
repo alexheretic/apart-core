@@ -20,7 +20,7 @@ static MOCK_IMAGE_CONTENTS: &str = "mock-partition-/dev/sda5-data";
 #[test]
 fn restore_success() {
     let core = CoreHandle::new().unwrap();
-    /// default estimated remaining duration in mock partclone
+    // default estimated remaining duration in mock partclone
     let mock_duration = OldDuration::minutes(3) + OldDuration::seconds(2);
 
     let source_image = format!("{}/{}", core.tmp_dir(), "mockimg-2017-04-20T1500.apt.dd.gz");
@@ -32,7 +32,7 @@ fn restore_success() {
     );
     core.send(&clone_msg);
 
-    let ref msg = core.expect_message_with(
+    let msg = &core.expect_message_with(
         |msg| msg["type"].as_str() == Some("restore") && msg["rate"].as_str().is_some(),
     );
     let id = msg["id"].as_str();
@@ -55,7 +55,7 @@ fn restore_success() {
 
     core.set_mock_partclone("dd", MockPartcloneState::new().complete(0.5634).rate("0.01GB/min"))
         .expect("!set_mock_partclone");
-    let ref msg = core.expect_message_with(|msg| msg["complete"].as_f64() == Some(0.5634));
+    let msg = &core.expect_message_with(|msg| msg["complete"].as_f64() == Some(0.5634));
     let expected_estimated_finished_time = Utc::now() + mock_duration;
 
     assert_eq!(msg["id"].as_str(), id);
@@ -86,7 +86,7 @@ fn restore_success() {
         |msg| msg["complete"].as_f64() != Some(1.0) && msg["syncing"].as_bool() == Some(true),
     );
 
-    let ref msg = core.expect_message_with(|msg| msg["complete"].as_f64() == Some(1.0));
+    let msg = &core.expect_message_with(|msg| msg["complete"].as_f64() == Some(1.0));
     assert_eq!(msg["id"].as_str(), id);
     // assert_eq!(msg["rate"].as_str(), Some("12.23GB/min"));
     assert_eq!(msg["start"].as_str(), start);
@@ -124,7 +124,7 @@ fn restore_using_partclone_fstype_variant_f2fs() {
 
     core.set_mock_partclone("f2fs", MockPartcloneState::new().complete(1.0).rate("1.23GB/min"))
         .expect("!set_mock_partclone");
-    let ref msg = core.expect_message_with(|msg| msg["complete"].as_f64() == Some(1.0));
+    let msg = &core.expect_message_with(|msg| msg["complete"].as_f64() == Some(1.0));
     assert_eq!(msg["source"].as_str(), Some(source_image.as_ref()));
     assert_eq!(msg["destination"].as_str(), Some("/dev/abc122"));
     assert_eq!(
@@ -161,7 +161,7 @@ fn restore_using_partclone_fstype_variant_ext2() {
 
     core.set_mock_partclone("ext2", MockPartcloneState::new().complete(1.0).rate("1.23GB/min"))
         .expect("!set_mock_partclone");
-    let ref msg = core.expect_message_with(|msg| msg["complete"].as_f64() == Some(1.0));
+    let msg = &core.expect_message_with(|msg| msg["complete"].as_f64() == Some(1.0));
     assert_eq!(msg["source"].as_str(), Some(source_image.as_ref()));
     assert_eq!(msg["destination"].as_str(), Some("/dev/abc124"));
     assert_eq!(
@@ -204,7 +204,7 @@ fn restore_lz4_compressed() {
 
     core.set_mock_partclone("ext2", MockPartcloneState::new().complete(1.0).rate("1.23GB/min"))
         .expect("!set_mock_partclone");
-    let ref msg = core.expect_message_with(|msg| msg["complete"].as_f64() == Some(1.0));
+    let msg = &core.expect_message_with(|msg| msg["complete"].as_f64() == Some(1.0));
     assert_eq!(msg["source"].as_str(), Some(source_image.as_ref()));
     assert_eq!(msg["destination"].as_str(), Some("/dev/abc124"));
     assert_eq!(
@@ -247,7 +247,7 @@ fn restore_zstd_compressed() {
 
     core.set_mock_partclone("ext2", MockPartcloneState::new().complete(1.0).rate("1.23GB/min"))
         .expect("!set_mock_partclone");
-    let ref msg = core.expect_message_with(|msg| msg["complete"].as_f64() == Some(1.0));
+    let msg = core.expect_message_with(|msg| msg["complete"].as_f64() == Some(1.0));
     assert_eq!(msg["source"].as_str(), Some(source_image.as_ref()));
     assert_eq!(msg["destination"].as_str(), Some("/dev/abc124"));
     assert_eq!(
@@ -284,7 +284,7 @@ fn restore_uncompressed() {
 
     core.set_mock_partclone("ext2", MockPartcloneState::new().complete(1.0).rate("1.23GB/min"))
         .expect("!set_mock_partclone");
-    let ref msg = core.expect_message_with(|msg| msg["complete"].as_f64() == Some(1.0));
+    let msg = core.expect_message_with(|msg| msg["complete"].as_f64() == Some(1.0));
     assert_eq!(msg["source"].as_str(), Some(source_image.as_ref()));
     assert_eq!(msg["destination"].as_str(), Some("/dev/abc124"));
     assert_eq!(
@@ -318,7 +318,7 @@ fn restore_then_cancel() {
     );
     core.send(&clone_msg);
 
-    let ref msg = core.expect_message_with(
+    let msg = core.expect_message_with(
         |msg| msg["type"].as_str() == Some("restore") && msg["rate"].as_str().is_some(),
     );
     let id = msg["id"].as_str();
@@ -326,13 +326,13 @@ fn restore_then_cancel() {
     core.set_mock_partclone("dd", MockPartcloneState::new().complete(0.7865).rate("9.00GB/min"))
         .expect("!set_mock_partclone");
 
-    let ref msg = core.expect_message_with(|msg| msg["rate"].as_str() == Some("9.00GB/min"));
+    let msg = core.expect_message_with(|msg| msg["rate"].as_str() == Some("9.00GB/min"));
     assert_eq!(msg["id"].as_str(), id);
 
     let cancel_msg = format!("type: cancel-restore\nid: {id}", id = id.unwrap());
     core.send(&cancel_msg);
 
-    let ref msg = core.expect_message_with(|msg| msg["error"].as_str().is_some());
+    let msg = core.expect_message_with(|msg| msg["error"].as_str().is_some());
     assert_eq!(msg["id"].as_str(), id);
     assert_eq!(msg["error"].as_str(), Some("Cancelled"));
 
@@ -355,7 +355,7 @@ fn restore_error() {
     );
     core.send(&clone_msg);
 
-    let ref msg = core.expect_message_with(
+    let msg = core.expect_message_with(
         |msg| msg["type"].as_str() == Some("restore") && msg["rate"].as_str().is_some(),
     );
     let id = msg["id"].as_str();
@@ -365,7 +365,7 @@ fn restore_error() {
         MockPartcloneState::new().complete(0.7865).rate("9.00GB/min").error(true),
     ).expect("!set_mock_partclone");
 
-    let ref msg = core.expect_message_with(|msg| msg["type"].as_str() == Some("restore-failed"));
+    let msg = core.expect_message_with(|msg| msg["type"].as_str() == Some("restore-failed"));
     assert_eq!(msg["id"].as_str(), id);
     assert_eq!(msg["error"].as_str(), Some("Failed"));
 

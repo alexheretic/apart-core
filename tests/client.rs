@@ -10,7 +10,6 @@ mod coreutil;
 use coreutil::CoreHandle;
 use std::time::Duration;
 use wait_timeout::ChildExt;
-use yaml_rust::Yaml;
 
 macro_rules! assert_partition {
     ($part:expr, $expected:expr) => {{
@@ -39,7 +38,7 @@ fn initial_status_message() {
         &sda["parts"][0],
         PartitionExpectation {
             name: "sda1",
-            size: 104857600,
+            size: 104_857_600,
             fstype: Some("ntfs"),
             label: Some("System Reserved"),
             mounted: false,
@@ -50,7 +49,7 @@ fn initial_status_message() {
         &sda["parts"][1],
         PartitionExpectation {
             name: "sda2",
-            size: 536766054400,
+            size: 536_766_054_400,
             fstype: Some("ntfs"),
             label: Some("SSD"),
             mounted: false,
@@ -61,7 +60,7 @@ fn initial_status_message() {
         &sda["parts"][2],
         PartitionExpectation {
             name: "sda3",
-            size: 181070200832,
+            size: 181_070_200_832,
             fstype: Some("ext4"),
             label: Some("Arch"),
             mounted: true,
@@ -83,7 +82,7 @@ fn initial_status_message() {
         &sda["parts"][4],
         PartitionExpectation {
             name: "sda5",
-            size: 32212254720,
+            size: 32_212_254_720,
             fstype: None,
             label: None,
             mounted: false,
@@ -93,13 +92,13 @@ fn initial_status_message() {
 
     let sdb = &core.initial_message["sources"][1];
     assert_eq!(sdb["name"].as_str(), Some("sdb"));
-    assert_eq!(sdb["size"].as_i64(), Some(62109253632));
+    assert_eq!(sdb["size"].as_i64(), Some(62_109_253_632));
 
     assert_partition!(
         &sdb["parts"][0],
         PartitionExpectation {
             name: "sdb1",
-            size: 524288000,
+            size: 524_288_000,
             fstype: Some("ext2"),
             label: Some("boot"),
             mounted: false,
@@ -110,7 +109,7 @@ fn initial_status_message() {
         &sdb["parts"][1],
         PartitionExpectation {
             name: "sdb2",
-            size: 2147483648,
+            size: 2_147_483_648,
             fstype: Some("swap"),
             label: Some("swap"),
             mounted: false,
@@ -121,7 +120,7 @@ fn initial_status_message() {
         &sdb["parts"][2],
         PartitionExpectation {
             name: "sdb3",
-            size: 59436433408,
+            size: 59_436_433_408,
             fstype: Some("f2fs"),
             label: Some("main"),
             mounted: false,
@@ -143,13 +142,13 @@ fn status_request() {
 
     let sda = &core.initial_message["sources"][0];
     assert_eq!(sda["name"].as_str(), Some("sda"));
-    assert_eq!(sda["size"].as_i64(), Some(750156374016));
+    assert_eq!(sda["size"].as_i64(), Some(750_156_374_016));
 
     assert_partition!(
         &sda["parts"][4],
         PartitionExpectation {
             name: "sda5",
-            size: 32212254720,
+            size: 32_212_254_720,
             fstype: None,
             label: None,
             mounted: false,
