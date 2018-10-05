@@ -20,6 +20,10 @@ mod compression;
 mod async;
 
 use server::Server;
+use std::alloc::System;
+
+#[global_allocator]
+static GLOBAL: System = System;
 
 fn main() {
     env_logger::init();
