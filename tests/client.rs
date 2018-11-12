@@ -19,7 +19,7 @@ macro_rules! assert_partition {
         assert_eq!($part["label"].as_str(), $expected.label);
         assert_eq!($part["mounted"].as_bool(), Some($expected.mounted));
         assert_eq!($part["uuid"].as_str(), $expected.uuid);
-    }}
+    }};
 }
 
 // Tests asserting from a client's perspective

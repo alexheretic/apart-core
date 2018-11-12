@@ -8,16 +8,16 @@ extern crate uuid;
 extern crate yaml_rust;
 extern crate zmq;
 
-mod server;
+mod async;
+mod child;
+mod clone;
+mod compression;
 mod inbound;
+mod lsblk;
 mod outbound;
 mod partclone;
-mod clone;
 mod restore;
-mod lsblk;
-mod child;
-mod compression;
-mod async;
+mod server;
 
 use server::Server;
 use std::alloc::System;
@@ -29,14 +29,15 @@ fn main() {
     env_logger::init();
 
     match std::env::args().take(2).last() {
-        Some(arg) => if arg.starts_with("ipc://") {
-            if let Err(err) = Server::start_at(&arg) {
-                error!("Core failed: {}", err);
+        Some(arg) => {
+            if arg.starts_with("ipc://") {
+                if let Err(err) = Server::start_at(&arg) {
+                    error!("Core failed: {}", err);
+                }
+            } else {
+                print_help();
             }
         }
-        else {
-            print_help();
-        },
         _ => print_help(),
     }
 }

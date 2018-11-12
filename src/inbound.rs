@@ -7,15 +7,28 @@ pub enum Request {
     StatusRequest,
     KillRequest,
 
-    CloneRequest { source: String, destination: String, name: String, compression: Compression },
-    CancelCloneRequest { id: String },
+    CloneRequest {
+        source: String,
+        destination: String,
+        name: String,
+        compression: Compression,
+    },
+    CancelCloneRequest {
+        id: String,
+    },
 
-    RestoreRequest { source: String, destination: String },
-    CancelRestoreRequest { id: String },
+    RestoreRequest {
+        source: String,
+        destination: String,
+    },
+    CancelRestoreRequest {
+        id: String,
+    },
 
-    DeleteImageRequest { file: String },
+    DeleteImageRequest {
+        file: String,
+    },
 }
-
 
 impl Request {
     /// Parses a yaml string to a Request struct, all errors -> None
@@ -45,8 +58,7 @@ impl Request {
                                     return None;
                                 }
                             }
-                        }
-                        else {
+                        } else {
                             Compression::default()
                         }
                     };
@@ -58,12 +70,15 @@ impl Request {
                         compression: z,
                     });
                 }
-                if let (Some("restore"), Some(source), Some(dest)) =
-                    (msg_type, msg["source"].as_str(), msg["destination"].as_str())
-                {
-                    return Some(
-                        RestoreRequest { source: source.to_owned(), destination: dest.to_owned() },
-                    );
+                if let (Some("restore"), Some(source), Some(dest)) = (
+                    msg_type,
+                    msg["source"].as_str(),
+                    msg["destination"].as_str(),
+                ) {
+                    return Some(RestoreRequest {
+                        source: source.to_owned(),
+                        destination: dest.to_owned(),
+                    });
                 }
                 if let (Some("cancel-clone"), Some(id)) = (msg_type, msg["id"].as_str()) {
                     return Some(CancelCloneRequest { id: id.to_owned() });
@@ -72,14 +87,15 @@ impl Request {
                     return Some(CancelRestoreRequest { id: id.to_owned() });
                 }
                 if let (Some("delete-clone"), Some(file)) = (msg_type, msg["file"].as_str()) {
-                    return Some(DeleteImageRequest { file: file.to_owned() });
+                    return Some(DeleteImageRequest {
+                        file: file.to_owned(),
+                    });
                 }
             }
         }
         None
     }
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -141,6 +157,11 @@ mod tests {
             "type: cancel-restore\n\
              id: uid13213",
         );
-        assert_eq!(message, Some(CancelRestoreRequest { id: "uid13213".to_owned() }));
+        assert_eq!(
+            message,
+            Some(CancelRestoreRequest {
+                id: "uid13213".to_owned()
+            })
+        );
     }
 }

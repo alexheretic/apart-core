@@ -1,18 +1,18 @@
 extern crate zmq;
 
-use inbound::Request;
-use inbound::Request::*;
 use clone;
 use clone::{CloneJob, CloneStatus};
-use restore::*;
+use inbound::Request;
+use inbound::Request::*;
+use lsblk;
 use outbound::*;
-use std::error::Error;
-use std::{fs, mem, thread};
+use restore::*;
 use std::collections::HashMap;
-use std::sync::mpsc::{channel, Receiver, Sender};
+use std::error::Error;
 use std::io::Result as IoResult;
 use std::marker::Send;
-use lsblk;
+use std::sync::mpsc::{channel, Receiver, Sender};
+use std::{fs, mem, thread};
 
 pub struct DeleteResult(pub String, pub IoResult<()>);
 
@@ -73,27 +73,32 @@ impl Server {
                             info!("KillRequest received dying...");
                             return Ok(());
                         }
-                        Some(CloneRequest { source, destination, name, compression }) => {
-                            match CloneJob::new(source, &destination, &name, compression) {
-                                Ok(job) => {
-                                    info!("Starting new job: {}", job);
-                                    self.clones.insert(job.id().to_owned(), job);
-                                }
-                                Err(err) => error!("Clonejob creation failed: {}", err),
+                        Some(CloneRequest {
+                            source,
+                            destination,
+                            name,
+                            compression,
+                        }) => match CloneJob::new(source, &destination, &name, compression) {
+                            Ok(job) => {
+                                info!("Starting new job: {}", job);
+                                self.clones.insert(job.id().to_owned(), job);
                             }
-                        }
-                        Some(RestoreRequest { source, destination }) => {
-                            match RestoreJob::new(source, destination) {
-                                Ok(job) => {
-                                    info!("Starting new job: {}", job);
-                                    self.restores.insert(job.id().to_owned(), job);
-                                }
-                                Err(err) => error!("RestoreJob creation failed: {}", err),
+                            Err(err) => error!("Clonejob creation failed: {}", err),
+                        },
+                        Some(RestoreRequest {
+                            source,
+                            destination,
+                        }) => match RestoreJob::new(source, destination) {
+                            Ok(job) => {
+                                info!("Starting new job: {}", job);
+                                self.restores.insert(job.id().to_owned(), job);
                             }
-                        }
+                            Err(err) => error!("RestoreJob creation failed: {}", err),
+                        },
                         Some(CancelCloneRequest { id }) => {
                             if let Some(job) = self.clones.remove(&id) {
-                                // cancel clone concurrently as removing .inprogress image can be slow
+                                // cancel clone concurrently as removing .inprogress image can be
+                                // slow
                                 let tx = self.io_master_sender.clone();
                                 thread::spawn(move || {
                                     let cancelled_msg = job.fail_status("Cancelled");
@@ -111,18 +116,21 @@ impl Server {
                                 self.zmq_send(&cancelled_msg)?;
                             }
                         }
-                        Some(DeleteImageRequest { file }) => if clone::is_valid_image_name(&file) {
-                            let tx = self.io_master_sender.clone();
-                            thread::spawn(move || {
-                                let rm_result = fs::remove_file(&file);
-                                if let Err(err) = tx.send(Box::new(DeleteResult(file, rm_result))) {
-                                    debug!("Could not send, shutting down?: {}", err);
-                                }
-                            });
+                        Some(DeleteImageRequest { file }) => {
+                            if clone::is_valid_image_name(&file) {
+                                let tx = self.io_master_sender.clone();
+                                thread::spawn(move || {
+                                    let rm_result = fs::remove_file(&file);
+                                    if let Err(err) =
+                                        tx.send(Box::new(DeleteResult(file, rm_result)))
+                                    {
+                                        debug!("Could not send, shutting down?: {}", err);
+                                    }
+                                });
+                            } else {
+                                warn!("Invalid image file for deletion: {}", file);
+                            }
                         }
-                        else {
-                            warn!("Invalid image file for deletion: {}", file);
-                        },
                         _ => warn!("Unhandled inbound message:\n{}", msg),
                     };
                     true
@@ -134,7 +142,10 @@ impl Server {
                 // EAGAIN no message waiting / within timeout, EINTR inturrupted while waited
                 Err(zmq::Error::EAGAIN) | Err(zmq::Error::EINTR) => false,
                 Err(x) => {
-                    error!("Unexpected error calling server.socket.recv_string(0): {}", x);
+                    error!(
+                        "Unexpected error calling server.socket.recv_string(0): {}",
+                        x
+                    );
                     return Err(Box::new(x));
                 }
             };
@@ -178,8 +189,7 @@ impl Server {
 
             if did_work {
                 self.socket.set_rcvtimeo(0)?;
-            }
-            else {
+            } else {
                 // go easy on cpu when there doesn't seem like much to do
                 self.socket.set_rcvtimeo(10)?;
             }

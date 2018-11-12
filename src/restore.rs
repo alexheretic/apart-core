@@ -1,17 +1,17 @@
+use child;
 use chrono::prelude::*;
-use std::{fmt, str, thread};
+use clone::partclone_variant_from_image;
+use compression::Compression;
+use partclone;
+use partclone::*;
+use std::cell::Cell;
+use std::error::Error;
+use std::os::unix::io::{FromRawFd, IntoRawFd};
 use std::process::{Child, Command, Stdio};
 use std::sync::mpsc;
 use std::sync::mpsc::Receiver;
-use std::os::unix::io::{FromRawFd, IntoRawFd};
+use std::{fmt, str, thread};
 use uuid::Uuid;
-use partclone;
-use partclone::*;
-use std::error::Error;
-use std::cell::Cell;
-use clone::partclone_variant_from_image;
-use child;
-use compression::Compression;
 
 #[derive(Debug)]
 pub struct RestoreStatusCommon<'a> {
@@ -30,8 +30,15 @@ pub enum RestoreStatus<'a> {
         rate: Option<String>,
         estimated_finish: Option<DateTime<Utc>>,
     },
-    Finished { common: RestoreStatusCommon<'a>, finish: DateTime<Utc> },
-    Failed { common: RestoreStatusCommon<'a>, reason: String, finish: DateTime<Utc> },
+    Finished {
+        common: RestoreStatusCommon<'a>,
+        finish: DateTime<Utc>,
+    },
+    Failed {
+        common: RestoreStatusCommon<'a>,
+        reason: String,
+        finish: DateTime<Utc>,
+    },
 }
 
 #[derive(Debug)]
@@ -62,18 +69,21 @@ impl<'j> RestoreJob {
         }
 
         Ok(match self.partclone_status.try_recv()? {
-            PartcloneStatus::Running { rate, estimated_finish, complete } => {
-                RestoreStatus::Running {
-                    common: self.clone_status_common(),
-                    complete: if complete > 0.9999 { 0.9999 } else { complete },
-                    syncing: complete > 0.9999,
-                    rate: Some(rate),
-                    estimated_finish: Some(estimated_finish),
-                }
-            }
-            PartcloneStatus::Synced { finish } => {
-                RestoreStatus::Finished { common: self.clone_status_common(), finish }
-            }
+            PartcloneStatus::Running {
+                rate,
+                estimated_finish,
+                complete,
+            } => RestoreStatus::Running {
+                common: self.clone_status_common(),
+                complete: if complete > 0.9999 { 0.9999 } else { complete },
+                syncing: complete > 0.9999,
+                rate: Some(rate),
+                estimated_finish: Some(estimated_finish),
+            },
+            PartcloneStatus::Synced { finish } => RestoreStatus::Finished {
+                common: self.clone_status_common(),
+                finish,
+            },
             PartcloneStatus::Failed { finish } => RestoreStatus::Failed {
                 common: self.clone_status_common(),
                 finish,
@@ -145,9 +155,14 @@ impl<'j> RestoreJob {
         let stderr = partclone_cmd.stderr.take().expect("!partclone.stderr");
         let (tx, partclone_status) = mpsc::channel();
         thread::Builder::new()
-            .name(format!("partclone-stderr-reader {}->{}", source, destination))
-            .spawn(move || if let Err(e) = partclone::read_output(stderr, &tx) {
-                error!("partclone::read_output failed: {}", e);
+            .name(format!(
+                "partclone-stderr-reader {}->{}",
+                source, destination
+            ))
+            .spawn(move || {
+                if let Err(e) = partclone::read_output(stderr, &tx) {
+                    error!("partclone::read_output failed: {}", e);
+                }
             })?;
 
         let job = RestoreJob {

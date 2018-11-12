@@ -6,12 +6,16 @@ pub fn drop_log_errors(cmd: &mut Child, log_name: &str) {
     match cmd.try_wait() {
         Ok(out) => {
             match out {
-                None => if let Err(x) = cmd.kill() {
-                    error!("Failed to kill {}: {}", log_name, x);
-                },
-                Some(status) => if !status.success() {
-                    warn!("{} finished with != 0 exit", log_name);
-                },
+                None => {
+                    if let Err(x) = cmd.kill() {
+                        error!("Failed to kill {}: {}", log_name, x);
+                    }
+                }
+                Some(status) => {
+                    if !status.success() {
+                        warn!("{} finished with != 0 exit", log_name);
+                    }
+                }
             };
             // after finish / kill use #wait to cleanup
             if let Err(err) = cmd.wait() {

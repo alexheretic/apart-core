@@ -1,8 +1,8 @@
 use json;
 use json::JsonValue;
-use std::{env, str};
 use std::io::{Error, ErrorKind, Result};
 use std::process::{Command, Stdio};
+use std::{env, str};
 
 fn lsblk_cmd() -> String {
     env::var("APART_LSBLK_CMD").unwrap_or_else(|_| "lsblk".to_owned())
@@ -30,7 +30,10 @@ pub fn blockdevices() -> Result<Vec<json::JsonValue>> {
             JsonValue::Array(devs) => Ok(devs),
             _ => Ok(Vec::new()),
         },
-        Err(err) => Err(Error::new(ErrorKind::InvalidData, format!("json invalid: {}", err))),
+        Err(err) => Err(Error::new(
+            ErrorKind::InvalidData,
+            format!("json invalid: {}", err),
+        )),
     }
 }
 
@@ -42,10 +45,8 @@ fn partition_matching(source: &str) -> Option<JsonValue> {
             for mut device in devices {
                 if let JsonValue::Array(parts) = device["children"].take() {
                     for part in parts {
-                        if part["name"].is_string() &&
-                            format!("/dev/{}", part["name"]) == source
-                        {
-                            return Some(part)
+                        if part["name"].is_string() && format!("/dev/{}", part["name"]) == source {
+                            return Some(part);
                         }
                     }
                 }
@@ -53,7 +54,6 @@ fn partition_matching(source: &str) -> Option<JsonValue> {
             None
         }
     }
-
 }
 
 /// expecting something like "/dev/sda1"

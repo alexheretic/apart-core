@@ -38,9 +38,11 @@ impl Drop for CoreHandle {
                 _ => println!("ERROR: {}", err), // unknown error
             },
             // process won't end on it's own, so kill
-            Ok(None) => if let Err(err) = self.process.kill() {
-                println!("ERROR: {}", err)
-            },
+            Ok(None) => {
+                if let Err(err) = self.process.kill() {
+                    println!("ERROR: {}", err)
+                }
+            }
             // process has ended
             Ok(Some(_)) => return,
         }
@@ -80,7 +82,8 @@ impl TmpDir {
                     &tmp_dir,
                     &file_path.file_name().unwrap().to_str().unwrap()
                 ),
-            ).expect("copy failed");
+            )
+            .expect("copy failed");
         }
 
         TmpDir {

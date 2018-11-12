@@ -1,3 +1,4 @@
+use async;
 use child;
 use chrono::prelude::*;
 use compression::Compression;
@@ -5,7 +6,6 @@ use lsblk;
 use partclone;
 use partclone::*;
 use regex::Regex;
-use std::{fmt, fs, str, thread};
 use std::cell::{Cell, RefCell};
 use std::error::Error;
 use std::fs::{File, Metadata};
@@ -15,8 +15,8 @@ use std::path::Path;
 use std::process::{Child, Command, Stdio};
 use std::sync::mpsc;
 use std::sync::mpsc::Receiver;
+use std::{fmt, fs, str, thread};
 use uuid::Uuid;
-use async;
 
 #[derive(Clone, PartialEq, Debug)]
 pub struct CloneStatusCommon {
@@ -36,9 +36,19 @@ pub enum CloneStatus {
         rate: Option<String>,
         estimated_finish: Option<DateTime<Utc>>,
     },
-    Syncing { common: CloneStatusCommon },
-    Finished { common: CloneStatusCommon, finish: DateTime<Utc>, image_size: u64 },
-    Failed { common: CloneStatusCommon, reason: String, finish: DateTime<Utc> },
+    Syncing {
+        common: CloneStatusCommon,
+    },
+    Finished {
+        common: CloneStatusCommon,
+        finish: DateTime<Utc>,
+        image_size: u64,
+    },
+    Failed {
+        common: CloneStatusCommon,
+        reason: String,
+        finish: DateTime<Utc>,
+    },
 }
 
 #[derive(Debug)]
@@ -73,7 +83,10 @@ fn destination_raw_fd(
     );
     let path = Path::new(&file);
     if path.exists() {
-        return Err(IoError::new(ErrorKind::AlreadyExists, format!("{} already exists", file)));
+        return Err(IoError::new(
+            ErrorKind::AlreadyExists,
+            format!("{} already exists", file),
+        ));
     }
     Ok((file.to_owned(), File::create(path)?.into_raw_fd()))
 }
@@ -131,7 +144,11 @@ impl CloneJob {
         }
 
         Ok(match self.partclone_status.try_recv()? {
-            PartcloneStatus::Running { rate, estimated_finish, complete } => CloneStatus::Running {
+            PartcloneStatus::Running {
+                rate,
+                estimated_finish,
+                complete,
+            } => CloneStatus::Running {
                 common: self.clone_status_common(),
                 complete: if complete > 0.9999 { 0.9999 } else { complete },
                 rate: Some(rate),
@@ -139,7 +156,9 @@ impl CloneJob {
             },
             PartcloneStatus::Synced { .. } => {
                 self.partclone_finished.set(true);
-                CloneStatus::Syncing { common: self.clone_status_common() }
+                CloneStatus::Syncing {
+                    common: self.clone_status_common(),
+                }
             }
             PartcloneStatus::Failed { finish } => CloneStatus::Failed {
                 common: self.clone_status_common(),
@@ -152,22 +171,24 @@ impl CloneJob {
     /// Returns `Ok(Some(()))` when both partclone & compress commands have exitted successfully
     fn try_wait(&self) -> (Result<Option<()>, Box<Error>>) {
         let pcl = match self.partclone_cmd.borrow_mut().try_wait() {
-            Ok(Some(status)) => if status.success() {
-                Some(())
+            Ok(Some(status)) => {
+                if status.success() {
+                    Some(())
+                } else {
+                    return Err("Clone failed".into());
+                }
             }
-            else {
-                return Err("Clone failed".into());
-            },
             Ok(None) => None,
             Err(_) => return Err("Clone failed".into()),
         };
         let cmp = match self.compress_cmd.borrow_mut().try_wait() {
-            Ok(Some(status)) => if status.success() {
-                Some(())
+            Ok(Some(status)) => {
+                if status.success() {
+                    Some(())
+                } else {
+                    return Err("Compress failed".into());
+                }
             }
-            else {
-                return Err("Compress failed".into());
-            },
             Ok(None) => None,
             Err(_) => return Err("Compress failed".into()),
         };
@@ -194,8 +215,9 @@ impl CloneJob {
     }
 
     pub fn successful_destination(&self) -> &str {
-        let (without_inprogress, _) =
-            self.destination.split_at(self.destination.len() - ".inprogress".len());
+        let (without_inprogress, _) = self
+            .destination
+            .split_at(self.destination.len() - ".inprogress".len());
         without_inprogress
     }
 
@@ -217,7 +239,10 @@ impl CloneJob {
             Some(fstype) => match partclone::cmd(&fstype) {
                 Ok(cmd) => (fstype, cmd),
                 Err(_) => {
-                    info!("No partclone command found for fstype '{}', using dd...", fstype);
+                    info!(
+                        "No partclone command found for fstype '{}', using dd...",
+                        fstype
+                    );
                     ("dd".to_owned(), partclone::cmd("dd")?)
                 }
             },
@@ -247,9 +272,9 @@ impl CloneJob {
 
         let compress_cmd = Command::new(z.command)
             .arg(z.write_args)
-            .stdin(
-                unsafe { Stdio::from_raw_fd(partclone_cmd.stdout.take().unwrap().into_raw_fd()) },
-            )
+            .stdin(unsafe {
+                Stdio::from_raw_fd(partclone_cmd.stdout.take().unwrap().into_raw_fd())
+            })
             .stdout(unsafe { Stdio::from_raw_fd(dest_raw_fd) })
             .stderr(Stdio::null())
             .spawn()?;
@@ -258,8 +283,10 @@ impl CloneJob {
         let (tx, partclone_status) = mpsc::channel();
         thread::Builder::new()
             .name(format!("partclone-stderr-reader {}->{}", source, dest_file))
-            .spawn(move || if let Err(e) = partclone::read_output(stderr, &tx) {
-                warn!("partclone::read_output failed: {}", e);
+            .spawn(move || {
+                if let Err(e) = partclone::read_output(stderr, &tx) {
+                    warn!("partclone::read_output failed: {}", e);
+                }
             })?;
 
         let source_uuid = lsblk::uuid(&source);
@@ -282,7 +309,10 @@ impl CloneJob {
 
 impl Drop for CloneJob {
     fn drop(&mut self) {
-        child::drop_log_errors(&mut self.partclone_cmd.borrow_mut(), "CloneJob#partclone_cmd");
+        child::drop_log_errors(
+            &mut self.partclone_cmd.borrow_mut(),
+            "CloneJob#partclone_cmd",
+        );
         child::drop_log_errors(&mut self.compress_cmd.borrow_mut(), "CloneJob#compress_cmd");
 
         let inprogress_file = Path::new(&self.destination);
@@ -296,7 +326,12 @@ impl Drop for CloneJob {
 
 impl fmt::Display for CloneJob {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "CloneJob({}->{})", self.source, self.successful_destination())
+        write!(
+            f,
+            "CloneJob({}->{})",
+            self.source,
+            self.successful_destination()
+        )
     }
 }
 
@@ -307,7 +342,10 @@ pub fn partclone_variant_from_image(filename: &str) -> Result<String, Box<Error>
     if let Some(caps) = image_re.captures_iter(filename).next() {
         return Ok(caps[1].parse::<String>()?);
     }
-    Err(Box::new(OutputInvalidError(format!("Invalid image file: {}", filename))))
+    Err(Box::new(OutputInvalidError(format!(
+        "Invalid image file: {}",
+        filename
+    ))))
 }
 
 pub fn is_valid_image_name(filename: &str) -> bool {
@@ -336,11 +374,17 @@ mod tests {
 
     #[test]
     fn image_valid() {
-        assert_eq!(is_valid_image_name("/mnt/backups/mockimg-2017-04-20T1500.apt.dd.gz"), true);
+        assert_eq!(
+            is_valid_image_name("/mnt/backups/mockimg-2017-04-20T1500.apt.dd.gz"),
+            true
+        );
     }
 
     #[test]
     fn image_invalid() {
-        assert_eq!(is_valid_image_name("/mnt/backups/mockimg-2017-04-20T1500.gz"), false);
+        assert_eq!(
+            is_valid_image_name("/mnt/backups/mockimg-2017-04-20T1500.gz"),
+            false
+        );
     }
 }

@@ -1,19 +1,27 @@
 use chrono::prelude::*;
-use std::{env, fmt, str};
-use std::path::Path;
-use std::process::ChildStderr;
 use chrono::Duration as OldDuration;
-use std::io::{BufRead, BufReader, Error as IoError, ErrorKind};
-use std::sync::mpsc::Sender;
 use regex::Regex;
 use std::error::Error;
+use std::io::{BufRead, BufReader, Error as IoError, ErrorKind};
+use std::path::Path;
+use std::process::ChildStderr;
 use std::rc::Rc;
+use std::sync::mpsc::Sender;
+use std::{env, fmt, str};
 
 #[derive(Debug)]
 pub enum PartcloneStatus {
-    Running { complete: f64, rate: String, estimated_finish: DateTime<Utc> },
-    Synced { finish: DateTime<Utc> },
-    Failed { finish: DateTime<Utc> },
+    Running {
+        complete: f64,
+        rate: String,
+        estimated_finish: DateTime<Utc>,
+    },
+    Synced {
+        finish: DateTime<Utc>,
+    },
+    Failed {
+        finish: DateTime<Utc>,
+    },
 }
 
 #[derive(Debug)]
@@ -58,15 +66,20 @@ pub fn cmd(variant: &str) -> Result<String, IoError> {
     };
 
     if partclone_cmd.is_none() {
-        return Err(IoError::new(ErrorKind::NotFound, "partclone not found on system".to_owned()));
+        return Err(IoError::new(
+            ErrorKind::NotFound,
+            "partclone not found on system".to_owned(),
+        ));
     }
 
     let partclone_cmd = partclone_cmd.unwrap();
     if Path::new(&partclone_cmd).exists() {
         Ok(partclone_cmd)
-    }
-    else {
-        Err(IoError::new(ErrorKind::NotFound, format!("{} not found", partclone_cmd)))
+    } else {
+        Err(IoError::new(
+            ErrorKind::NotFound,
+            format!("{} not found", partclone_cmd),
+        ))
     }
 }
 
@@ -99,9 +112,9 @@ pub fn read_output(stderr: ChildStderr, tx: &Sender<PartcloneStatus>) -> Result<
                                 cap[2].parse::<i64>(),
                                 cap[3].parse::<i64>(),
                             ) {
-                                let remaining = OldDuration::hours(hours) +
-                                    OldDuration::minutes(minutes) +
-                                    OldDuration::seconds(seconds);
+                                let remaining = OldDuration::hours(hours)
+                                    + OldDuration::minutes(minutes)
+                                    + OldDuration::seconds(seconds);
                                 estimated_finish = Some(Utc::now() + remaining);
                             }
                         }
@@ -111,13 +124,13 @@ pub fn read_output(stderr: ChildStderr, tx: &Sender<PartcloneStatus>) -> Result<
                         let rate = cap[3].to_owned();
                         debug!(
                             "Partclone output: complete: {}, finish: {}, rate: {}",
-                            complete,
-                            estimated_finish,
-                            rate
+                            complete, estimated_finish, rate
                         );
-                        if let Err(err) =
-                            tx.send(PartcloneStatus::Running { estimated_finish, rate, complete })
-                        {
+                        if let Err(err) = tx.send(PartcloneStatus::Running {
+                            estimated_finish,
+                            rate,
+                            complete,
+                        }) {
                             // this can be expected if, for example, the job is cancelled
                             debug!("Could not send, job dropped?: {}", err);
                             return Ok(());
@@ -127,8 +140,7 @@ pub fn read_output(stderr: ChildStderr, tx: &Sender<PartcloneStatus>) -> Result<
                         synced = true;
                     }
                 }
-            }
-            else if out.starts_with("File system:") {
+            } else if out.starts_with("File system:") {
                 started_main_output = true;
             }
         }
@@ -137,8 +149,7 @@ pub fn read_output(stderr: ChildStderr, tx: &Sender<PartcloneStatus>) -> Result<
         if let Err(err) = tx.send(PartcloneStatus::Synced { finish: Utc::now() }) {
             debug!("Could not send, job dropped?: {}", err);
         }
-    }
-    else {
+    } else {
         for tail_line in partclone_out_tail {
             error!("Partclone-failed: {}", tail_line);
         }
