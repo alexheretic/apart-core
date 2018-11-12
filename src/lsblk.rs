@@ -10,10 +10,10 @@ fn lsblk_cmd() -> String {
 
 /**
  * example json output
- * [{"name": "sda", "size": "750156374016", "fstype": null, "label": null, "mountpoint": null,
+ * [{"name": "sda", "size": 750156374016, "fstype": null, "label": null, "mountpoint": null,
  *   "children": [
- *      {"name": "sda1", "size": "104857600", "fstype": "ntfs", "label": "Win Reserved", "mountpoint": null, "uuid": null},
- *      {"name": "sda2", "size": "536766054400", "fstype": "ntfs", "label": "SSD", "mountpoint": null, "uuid": null},
+ *      {"name": "sda1", "size": 104857600, "fstype": "ntfs", "label": "Win Reserved", "mountpoint": null, "uuid": null},
+ *      {"name": "sda2", "size": 536766054400, "fstype": "ntfs", "label": "SSD", "mountpoint": null, "uuid": null},
  *      ...
  *   ]
  * }]

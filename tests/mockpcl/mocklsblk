@@ -13,20 +13,20 @@ done
 ## Assume was called with expected args '-Jbo name,size,fstype,label,mountpoint,uuid'
 echo '{
    "blockdevices": [
-      {"name": "sda", "size": "750156374016", "fstype": null, "label": null, "mountpoint": null, "uuid": null,
+      {"name": "sda", "size": 750156374016, "fstype": null, "label": null, "mountpoint": null, "uuid": null,
          "children": [
-            {"name": "sda1", "size": "104857600", "fstype": "ntfs", "label": "System Reserved", "mountpoint": null, "uuid": "123-123-123"},
-            {"name": "sda2", "size": "536766054400", "fstype": "ntfs", "label": "SSD", "mountpoint": null, "uuid": "234-234-234"},
-            {"name": "sda3", "size": "181070200832", "fstype": "ext4", "label": "Arch", "mountpoint": "/", "uuid": "345-345-345"},
-            {"name": "sda4", "size": "1024", "fstype": null, "label": null, "mountpoint": null, "uuid": null},
-            {"name": "sda5", "size": "32212254720", "fstype": null, "label": null, "mountpoint": null, "uuid": null}
+            {"name": "sda1", "size": 104857600, "fstype": "ntfs", "label": "System Reserved", "mountpoint": null, "uuid": "123-123-123"},
+            {"name": "sda2", "size": 536766054400, "fstype": "ntfs", "label": "SSD", "mountpoint": null, "uuid": "234-234-234"},
+            {"name": "sda3", "size": 181070200832, "fstype": "ext4", "label": "Arch", "mountpoint": "/", "uuid": "345-345-345"},
+            {"name": "sda4", "size": 1024, "fstype": null, "label": null, "mountpoint": null, "uuid": null},
+            {"name": "sda5", "size": 32212254720, "fstype": null, "label": null, "mountpoint": null, "uuid": null}
          ]
       },
-      {"name": "sdb", "size": "62109253632", "fstype": null, "label": null, "mountpoint": null, "uuid": null,
+      {"name": "sdb", "size": 62109253632, "fstype": null, "label": null, "mountpoint": null, "uuid": null,
          "children": [
-            {"name": "sdb1", "size": "524288000", "fstype": "ext2", "label": "boot", "mountpoint": null, "uuid": "456-456-456"},
-            {"name": "sdb2", "size": "2147483648", "fstype": "swap", "label": "swap", "mountpoint": null, "uuid": "567-567-567"},
-            {"name": "sdb3", "size": "59436433408", "fstype": "f2fs", "label": "main", "mountpoint": null, "uuid": "678-678-678"}
+            {"name": "sdb1", "size": 524288000, "fstype": "ext2", "label": "boot", "mountpoint": null, "uuid": "456-456-456"},
+            {"name": "sdb2", "size": 2147483648, "fstype": "swap", "label": "swap", "mountpoint": null, "uuid": "567-567-567"},
+            {"name": "sdb3", "size": 59436433408, "fstype": "f2fs", "label": "main", "mountpoint": null, "uuid": "678-678-678"}
          ]
       }
    ]
