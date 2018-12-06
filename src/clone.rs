@@ -1,10 +1,10 @@
-use async;
-use child;
+use crate::child;
+use crate::compression::Compression;
+use crate::lsblk;
+use crate::partclone;
+use crate::partclone::*;
+use crate::asynchronous;
 use chrono::prelude::*;
-use compression::Compression;
-use lsblk;
-use partclone;
-use partclone::*;
 use regex::Regex;
 use std::cell::{Cell, RefCell};
 use std::error::Error;
@@ -110,7 +110,7 @@ impl CloneJob {
                     if self.rename_task.borrow().is_none() {
                         let from = self.destination.clone();
                         let to = self.successful_destination().to_owned();
-                        *self.rename_task.borrow_mut() = Some(async::receiver(move || {
+                        *self.rename_task.borrow_mut() = Some(asynchronous::receiver(move || {
                             fs::rename(&from, &to)?;
                             fs::metadata(&to)
                         }));

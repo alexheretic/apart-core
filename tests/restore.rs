@@ -8,9 +8,9 @@ extern crate yaml_rust;
 extern crate zmq;
 mod coreutil;
 
+use crate::coreutil::*;
 use chrono::prelude::*;
 use chrono::Duration as OldDuration;
-use coreutil::*;
 use std::process::{Command, Stdio};
 
 // Tests asserting from a client's perspective performing a partition restore

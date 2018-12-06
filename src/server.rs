@@ -1,12 +1,12 @@
 extern crate zmq;
 
-use clone;
-use clone::{CloneJob, CloneStatus};
-use inbound::Request;
-use inbound::Request::*;
-use lsblk;
-use outbound::*;
-use restore::*;
+use crate::clone;
+use crate::clone::{CloneJob, CloneStatus};
+use crate::inbound::Request;
+use crate::inbound::Request::*;
+use crate::lsblk;
+use crate::outbound::*;
+use crate::restore::*;
 use std::collections::HashMap;
 use std::error::Error;
 use std::io::Result as IoResult;

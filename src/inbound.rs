@@ -1,5 +1,5 @@
 use self::Request::*;
-use compression::Compression;
+use crate::compression::Compression;
 use yaml_rust::YamlLoader;
 
 #[derive(PartialEq, Debug)]

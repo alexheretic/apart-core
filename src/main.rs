@@ -8,7 +8,7 @@ extern crate uuid;
 extern crate yaml_rust;
 extern crate zmq;
 
-mod async;
+mod asynchronous;
 mod child;
 mod clone;
 mod compression;
@@ -19,7 +19,7 @@ mod partclone;
 mod restore;
 mod server;
 
-use server::Server;
+use crate::server::Server;
 use std::alloc::System;
 
 #[global_allocator]

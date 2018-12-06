@@ -1,9 +1,9 @@
-use child;
+use crate::child;
+use crate::clone::partclone_variant_from_image;
+use crate::compression::Compression;
+use crate::partclone;
+use crate::partclone::*;
 use chrono::prelude::*;
-use clone::partclone_variant_from_image;
-use compression::Compression;
-use partclone;
-use partclone::*;
 use std::cell::Cell;
 use std::error::Error;
 use std::os::unix::io::{FromRawFd, IntoRawFd};

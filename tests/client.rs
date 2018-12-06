@@ -7,7 +7,7 @@ extern crate yaml_rust;
 extern crate zmq;
 mod coreutil;
 
-use coreutil::CoreHandle;
+use crate::coreutil::CoreHandle;
 use std::time::Duration;
 use wait_timeout::ChildExt;
 

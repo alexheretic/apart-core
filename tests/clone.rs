@@ -8,9 +8,9 @@ extern crate yaml_rust;
 extern crate zmq;
 mod coreutil;
 
+use crate::coreutil::*;
 use chrono::prelude::*;
 use chrono::Duration as OldDuration;
-use coreutil::*;
 use std::path::Path;
 use std::process::{Command, Stdio};
 use std::time::{Duration, Instant};
