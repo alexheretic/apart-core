@@ -55,7 +55,7 @@ impl ToYaml for CloneStatusCommon {
     }
 }
 
-impl<'a> ToYaml for RestoreStatusCommon<'a> {
+impl ToYaml for RestoreStatusCommon<'_> {
     fn to_yaml(&self) -> String {
         let &RestoreStatusCommon {
             start,
@@ -132,7 +132,7 @@ impl ToYaml for CloneStatus {
     }
 }
 
-impl<'a> ToYaml for RestoreStatus<'a> {
+impl ToYaml for RestoreStatus<'_> {
     fn to_yaml(&self) -> String {
         match *self {
             RestoreStatus::Running {

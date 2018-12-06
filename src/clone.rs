@@ -1,9 +1,10 @@
+use crate::asynchronous;
 use crate::child;
 use crate::compression::Compression;
+use crate::include::*;
 use crate::lsblk;
 use crate::partclone;
 use crate::partclone::*;
-use crate::asynchronous;
 use chrono::prelude::*;
 use regex::Regex;
 use std::cell::{Cell, RefCell};
@@ -92,7 +93,7 @@ fn destination_raw_fd(
 }
 
 impl CloneJob {
-    pub fn try_recv(&self) -> Result<CloneStatus, Box<Error>> {
+    pub fn try_recv(&self) -> Result<CloneStatus, Box<dyn Error>> {
         if !self.sent_first_msg.get() {
             // bosh out an initial running message to show the clone has started
             self.sent_first_msg.set(true);
@@ -169,7 +170,7 @@ impl CloneJob {
     }
 
     /// Returns `Ok(Some(()))` when both partclone & compress commands have exitted successfully
-    fn try_wait(&self) -> (Result<Option<()>, Box<Error>>) {
+    fn try_wait(&self) -> (Result<Option<()>, Box<dyn Error>>) {
         let pcl = match self.partclone_cmd.borrow_mut().try_wait() {
             Ok(Some(status)) => {
                 if status.success() {
@@ -325,7 +326,7 @@ impl Drop for CloneJob {
 }
 
 impl fmt::Display for CloneJob {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
             "CloneJob({}->{})",
@@ -335,7 +336,7 @@ impl fmt::Display for CloneJob {
     }
 }
 
-pub fn partclone_variant_from_image(filename: &str) -> Result<String, Box<Error>> {
+pub fn partclone_variant_from_image(filename: &str) -> Result<String, Box<dyn Error>> {
     let image_re =
         Regex::new(r"^.*/?[^/]+-\d{4,}-\d\d-\d\dT\d{4}\.apt\.(.+)\..+$").expect("!image_re");
 

@@ -1,6 +1,7 @@
 use crate::child;
 use crate::clone::partclone_variant_from_image;
 use crate::compression::Compression;
+use crate::include::*;
 use crate::partclone;
 use crate::partclone::*;
 use chrono::prelude::*;
@@ -55,7 +56,7 @@ pub struct RestoreJob {
 }
 
 impl<'j> RestoreJob {
-    pub fn try_recv(&'j self) -> Result<RestoreStatus<'j>, Box<Error>> {
+    pub fn try_recv(&'j self) -> Result<RestoreStatus<'j>, Box<dyn Error>> {
         if !self.sent_first_msg.get() {
             // bosh out an initial running message to show the clone has started
             self.sent_first_msg.set(true);
@@ -105,7 +106,7 @@ impl<'j> RestoreJob {
         &self.id
     }
 
-    pub fn fail_status(&self, reason: &str) -> RestoreStatus {
+    pub fn fail_status(&self, reason: &str) -> RestoreStatus<'_> {
         RestoreStatus::Failed {
             common: self.clone_status_common(),
             reason: reason.to_owned(),
@@ -113,7 +114,7 @@ impl<'j> RestoreJob {
         }
     }
 
-    pub fn new(source: String, destination: String) -> Result<RestoreJob, Box<Error>> {
+    pub fn new(source: String, destination: String) -> Result<RestoreJob, Box<dyn Error>> {
         let partclone_cmd = partclone::cmd(&partclone_variant_from_image(&source)?)?;
 
         let z = Compression::from_file_name(&source)?;
@@ -182,7 +183,7 @@ impl<'j> RestoreJob {
 }
 
 impl fmt::Display for RestoreJob {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "RestoreJob({}->{})", self.source, self.destination)
     }
 }

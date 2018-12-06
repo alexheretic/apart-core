@@ -2,6 +2,7 @@
 name = "apart-core"
 version = "0.3.8"
 authors = ["Alex Butler <alexheretic@gmail.com>"]
+edition = "2018"
 
 [dependencies]
 zmq = "0.8.2"

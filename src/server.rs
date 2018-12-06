@@ -1,9 +1,8 @@
-extern crate zmq;
-
 use crate::clone;
 use crate::clone::{CloneJob, CloneStatus};
 use crate::inbound::Request;
 use crate::inbound::Request::*;
+use crate::include::*;
 use crate::lsblk;
 use crate::outbound::*;
 use crate::restore::*;
@@ -20,8 +19,8 @@ pub struct Server {
     socket: zmq::Socket,
     clones: HashMap<String, CloneJob>,
     restores: HashMap<String, RestoreJob>,
-    io_receiver: Receiver<Box<ToYaml + Send>>,
-    io_master_sender: Sender<Box<ToYaml + Send>>,
+    io_receiver: Receiver<Box<dyn ToYaml + Send>>,
+    io_master_sender: Sender<Box<dyn ToYaml + Send>>,
 }
 
 impl Drop for Server {
@@ -34,7 +33,7 @@ impl Drop for Server {
 
 impl Server {
     /// Start up server using an input ipc address for communication with the client
-    pub fn start_at(ipc_address: &str) -> Result<(), Box<Error>> {
+    pub fn start_at(ipc_address: &str) -> Result<(), Box<dyn Error>> {
         let socket = zmq::Context::new().socket(zmq::PAIR)?;
         socket.connect(ipc_address)?;
         socket.set_sndtimeo(1000)?; // block 1s on sends or error
@@ -53,7 +52,7 @@ impl Server {
         server.run()
     }
 
-    fn zmq_send(&self, msg: &str) -> Result<(), Box<Error>> {
+    fn zmq_send(&self, msg: &str) -> Result<(), Box<dyn Error>> {
         match self.socket.send_str(msg, 0) {
             Err(x) => Err(Box::new(x)),
             Ok(_) => Ok(()),
@@ -61,7 +60,7 @@ impl Server {
     }
 
     /// Start the event loop & run until a reason to stop
-    fn run(&mut self) -> Result<(), Box<Error>> {
+    fn run(&mut self) -> Result<(), Box<dyn Error>> {
         loop {
             let mut did_work = match self.socket.recv_string(0) {
                 Ok(Ok(msg)) => {

@@ -1,10 +1,6 @@
 // #[macro_use] extern crate log;
 // extern crate env_logger;
-extern crate flate2;
-extern crate uuid;
-extern crate wait_timeout;
-extern crate yaml_rust;
-extern crate zmq;
+
 mod coreutil;
 
 use crate::coreutil::CoreHandle;

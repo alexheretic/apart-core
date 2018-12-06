@@ -1,13 +1,3 @@
-extern crate chrono;
-extern crate env_logger;
-extern crate json;
-#[macro_use]
-extern crate log;
-extern crate regex;
-extern crate uuid;
-extern crate yaml_rust;
-extern crate zmq;
-
 mod asynchronous;
 mod child;
 mod clone;
@@ -19,6 +9,11 @@ mod partclone;
 mod restore;
 mod server;
 
+pub(crate) mod include {
+    pub(crate) use log::{debug, error, info, trace, warn};
+}
+
+use crate::include::*;
 use crate::server::Server;
 use std::alloc::System;
 

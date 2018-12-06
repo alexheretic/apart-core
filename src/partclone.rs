@@ -1,3 +1,4 @@
+use crate::include::*;
 use chrono::prelude::*;
 use chrono::Duration as OldDuration;
 use regex::Regex;
@@ -28,7 +29,7 @@ pub enum PartcloneStatus {
 pub struct OutputInvalidError(pub String);
 
 impl fmt::Display for OutputInvalidError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{:?}", self)
     }
 }
@@ -37,7 +38,7 @@ impl Error for OutputInvalidError {
     fn description(&self) -> &str {
         &self.0
     }
-    fn cause(&self) -> Option<&Error> {
+    fn cause(&self) -> Option<&dyn Error> {
         None
     }
 }
@@ -85,7 +86,10 @@ pub fn cmd(variant: &str) -> Result<String, IoError> {
 
 static PARTCLONE_LOG_TAIL: usize = 4;
 
-pub fn read_output(stderr: ChildStderr, tx: &Sender<PartcloneStatus>) -> Result<(), Box<Error>> {
+pub fn read_output(
+    stderr: ChildStderr,
+    tx: &Sender<PartcloneStatus>,
+) -> Result<(), Box<dyn Error>> {
     let progress_re = Regex::new(
     r"Remaining:\s*(\d{2,}:\d{2}:\d{2}), Completed:\s*(\d{1,3}\.?\d?\d?)%,\s*R?a?t?e?:?\s*([0-9][^,]+)").unwrap();
 

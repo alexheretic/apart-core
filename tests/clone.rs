@@ -1,11 +1,8 @@
-extern crate chrono;
-extern crate env_logger;
-extern crate flate2;
+use env_logger;
+
 #[macro_use]
 extern crate log;
-extern crate uuid;
-extern crate yaml_rust;
-extern crate zmq;
+
 mod coreutil;
 
 use crate::coreutil::*;
