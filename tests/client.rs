@@ -1,5 +1,4 @@
-// #[macro_use] extern crate log;
-// extern crate env_logger;
+#![allow(clippy::cyclomatic_complexity)]
 
 mod coreutil;
 

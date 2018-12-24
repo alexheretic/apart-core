@@ -5,7 +5,7 @@ authors = ["Alex Butler <alexheretic@gmail.com>"]
 edition = "2018"
 
 [dependencies]
-zmq = "0.8.2"
+zmq = "0.9"
 yaml-rust = "0.4"
 log = "0.4"
 env_logger = "0.6"

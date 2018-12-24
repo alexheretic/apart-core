@@ -53,7 +53,7 @@ impl Server {
     }
 
     fn zmq_send(&self, msg: &str) -> Result<(), Box<dyn Error>> {
-        match self.socket.send_str(msg, 0) {
+        match self.socket.send(msg, 0) {
             Err(x) => Err(Box::new(x)),
             Ok(_) => Ok(()),
         }

@@ -27,7 +27,7 @@ impl Drop for CoreHandle {
         if let Ok(None) = self.process.try_wait() {
             println!("sending kill message to apart-core...");
             // try to send kill message, ignore errors
-            if self.socket.send_str("type: kill-request", 0).is_ok() {
+            if self.socket.send("type: kill-request", 0).is_ok() {
                 let _ = self.socket.recv_string(0);
             };
         }
@@ -207,9 +207,7 @@ impl CoreHandle {
     }
 
     pub fn send(&self, msg: &str) {
-        self.socket
-            .send_str(msg, 0)
-            .expect("sending to core failed");
+        self.socket.send(msg, 0).expect("sending to core failed");
     }
 
     pub fn set_mock_partclone(

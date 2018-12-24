@@ -216,7 +216,7 @@ type: kill-request
 Core will cancel all jobs and shutdown (sending the dying status above)
 
 ## Dependencies
-* zeromq
+* zeromq >= 4.1
 * partclone
 * pigz
 * lz4 *(optional: adds compression option)*
