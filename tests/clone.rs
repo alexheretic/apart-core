@@ -1,13 +1,9 @@
-use env_logger;
-
-#[macro_use]
-extern crate log;
-
 mod coreutil;
 
 use crate::coreutil::*;
 use chrono::prelude::*;
 use chrono::Duration as OldDuration;
+use log::warn;
 use std::path::Path;
 use std::process::{Command, Stdio};
 use std::time::{Duration, Instant};

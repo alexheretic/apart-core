@@ -1,13 +1,9 @@
-use env_logger;
-
-#[macro_use]
-extern crate log;
-
 mod coreutil;
 
 use crate::coreutil::*;
 use chrono::prelude::*;
 use chrono::Duration as OldDuration;
+use log::warn;
 use std::process::{Command, Stdio};
 
 // Tests asserting from a client's perspective performing a partition restore

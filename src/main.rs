@@ -39,11 +39,10 @@ fn main() {
 
 fn print_help() {
     println!(
-        "{}\n{}\n\n{}\n{}",
-        "Apart-core",
-        "  usage: apart-core IPC_ADDRESS",
-        "  ENV VAR 'APART_PARTCLONE_CMD': override the partclone command location",
-        "  ENV VAR 'APART_LSBLK_CMD': override the lsblk command location"
+        "Apart-core\
+        \n  usage: apart-core IPC_ADDRESS\n\
+        \n  ENV VAR 'APART_PARTCLONE_CMD': override the partclone command location\
+        \n  ENV VAR 'APART_LSBLK_CMD': override the lsblk command location"
     );
     std::process::exit(1);
 }

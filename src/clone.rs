@@ -170,7 +170,7 @@ impl CloneJob {
     }
 
     /// Returns `Ok(Some(()))` when both partclone & compress commands have exitted successfully
-    fn try_wait(&self) -> (Result<Option<()>, Box<dyn Error>>) {
+    fn try_wait(&self) -> Result<Option<()>, Box<dyn Error>> {
         let pcl = match self.partclone_cmd.borrow_mut().try_wait() {
             Ok(Some(status)) => {
                 if status.success() {

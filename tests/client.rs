@@ -1,4 +1,4 @@
-#![allow(clippy::cyclomatic_complexity)]
+#![allow(clippy::cognitive_complexity)]
 
 mod coreutil;
 
@@ -162,7 +162,7 @@ fn kill_request() {
 
     match core.process.wait_timeout(Duration::from_secs(2)).unwrap() {
         Some(status) => assert!(status.success()),
-        None => assert!(false, "process did not stop"),
+        None => panic!("process did not stop"),
     }
 }
 

@@ -34,7 +34,7 @@ impl Drop for CoreHandle {
 
         match self.process.try_wait() {
             Err(err) => match err.raw_os_error() {
-                Some(10) => return,              // already dead
+                Some(10) => {}                   // already dead
                 _ => println!("ERROR: {}", err), // unknown error
             },
             // process won't end on it's own, so kill
@@ -44,7 +44,7 @@ impl Drop for CoreHandle {
                 }
             }
             // process has ended
-            Ok(Some(_)) => return,
+            Ok(Some(_)) => {}
         }
     }
 }
@@ -169,7 +169,7 @@ impl CoreHandle {
             .stdin(Stdio::null())
             .stdout(Stdio::null())
             .stderr(Stdio::inherit())
-            .arg(ipc_address.to_string())
+            .arg(ipc_address)
             .env("RUST_LOG", "info")
             .env("APART_PARTCLONE_CMD", format!("{}/mockpcl", tmp_dir.dir))
             .env("APART_LSBLK_CMD", format!("{}/mocklsblk", tmp_dir.dir))

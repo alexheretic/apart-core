@@ -298,7 +298,6 @@ impl ToYaml for DeleteResult {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use json;
     use yaml_rust::yaml::*;
 
     #[test]
