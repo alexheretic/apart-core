@@ -375,17 +375,15 @@ mod tests {
 
     #[test]
     fn image_valid() {
-        assert_eq!(
-            is_valid_image_name("/mnt/backups/mockimg-2017-04-20T1500.apt.dd.gz"),
-            true
-        );
+        assert!(is_valid_image_name(
+            "/mnt/backups/mockimg-2017-04-20T1500.apt.dd.gz"
+        ));
     }
 
     #[test]
     fn image_invalid() {
-        assert_eq!(
-            is_valid_image_name("/mnt/backups/mockimg-2017-04-20T1500.gz"),
-            false
-        );
+        assert!(!is_valid_image_name(
+            "/mnt/backups/mockimg-2017-04-20T1500.gz"
+        ));
     }
 }

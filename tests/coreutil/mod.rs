@@ -5,13 +5,13 @@ extern crate uuid;
 extern crate yaml_rust;
 extern crate zmq;
 
-use std::fs;
 use std::io::{Error, ErrorKind, Result};
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 use std::process::Stdio;
 use std::process::{Child, Command};
 use std::time::{Duration, Instant};
+use std::{env, fs};
 use yaml_rust::{Yaml, YamlLoader};
 
 pub struct CoreHandle {
@@ -158,14 +158,17 @@ impl CoreHandle {
 
         let tmp_dir = TmpDir::new(&uuid);
 
-        // support running in workspace mode too
-        let path = ["target/debug/apart-core", "../target/debug/apart-core"]
-            .iter()
-            .map(Path::new)
-            .find(|p| p.is_file())
-            .expect("`debug/apart-core` not found");
+        let bin_path = Path::new(
+            env::var("CARGO_TARGET_DIR")
+                .as_deref()
+                .unwrap_or("../target"),
+        )
+        .join("debug")
+        .join("apart-core");
 
-        let core = Command::new(path)
+        assert!(bin_path.is_file(), "file `debug/apart-core` not found");
+
+        let core = Command::new(bin_path)
             .stdin(Stdio::null())
             .stdout(Stdio::null())
             .stderr(Stdio::inherit())
