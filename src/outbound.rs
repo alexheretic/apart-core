@@ -1,13 +1,8 @@
-use crate::clone::*;
-use crate::compression::Compression;
-use crate::restore::*;
-use crate::server::DeleteResult;
+use crate::{clone::*, compression::Compression, restore::*, server::DeleteResult};
 use chrono::prelude::*;
 use json::JsonValue;
 use std::io::ErrorKind;
-use yaml_rust::emitter::YamlEmitter;
-use yaml_rust::yaml;
-use yaml_rust::yaml::Yaml;
+use yaml_rust::{emitter::YamlEmitter, yaml, yaml::Yaml};
 
 pub trait ToYaml {
     fn to_yaml(&self) -> String;

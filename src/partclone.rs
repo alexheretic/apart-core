@@ -1,14 +1,17 @@
 use crate::include::*;
-use chrono::prelude::*;
-use chrono::Duration as OldDuration;
+use chrono::{prelude::*, Duration as OldDuration};
 use regex::Regex;
-use std::error::Error;
-use std::io::{BufRead, BufReader, Error as IoError, ErrorKind};
-use std::path::Path;
-use std::process::ChildStderr;
-use std::rc::Rc;
-use std::sync::mpsc::Sender;
-use std::{env, fmt, str};
+use std::{
+    env,
+    error::Error,
+    fmt,
+    io::{BufRead, BufReader, Error as IoError, ErrorKind},
+    path::Path,
+    process::ChildStderr,
+    rc::Rc,
+    str,
+    sync::mpsc::Sender,
+};
 
 #[derive(Debug)]
 pub enum PartcloneStatus {
@@ -44,7 +47,7 @@ impl Error for OutputInvalidError {
 }
 
 fn default_partclone_path() -> Option<&'static str> {
-    for location in &[
+    [
         "/usr/bin/partclone",
         "/usr/sbin/partclone",
         "/bin/partclone",
@@ -52,12 +55,9 @@ fn default_partclone_path() -> Option<&'static str> {
         "/usr/local/partclone",
         "/usr/local/bin/partclone",
         "/usr/local/sbin/partclone",
-    ] {
-        if Path::new(&format!("{}.dd", location)).exists() {
-            return Some(location);
-        }
-    }
-    None
+    ]
+    .into_iter()
+    .find(|p| Path::new(p).with_extension("dd").exists())
 }
 
 pub fn cmd(variant: &str) -> Result<String, IoError> {

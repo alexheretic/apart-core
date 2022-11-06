@@ -1,22 +1,25 @@
 use json::JsonValue;
-use std::io::{Error, ErrorKind, Result};
-use std::process::{Command, Stdio};
-use std::{env, str};
+use std::{
+    env,
+    io::{Error, ErrorKind, Result},
+    process::{Command, Stdio},
+    str,
+};
 
 fn lsblk_cmd() -> String {
     env::var("APART_LSBLK_CMD").unwrap_or_else(|_| "lsblk".to_owned())
 }
 
 /**
- ** example json output
- ** [{"name": "sda", "size": 750156374016, "fstype": null, "label": null, "mountpoint": null,
- **   "children": [
- **      {"name": "sda1", "size": 104857600, "fstype": "ntfs", "label": "Win Reserved",
- ** "mountpoint": null, "uuid": null},      {"name": "sda2", "size": 536766054400, "fstype":
- ** "ntfs", "label": "SSD", "mountpoint": null, "uuid": null},      ...
- **   ]
- ** }]
- **/
+ * example json output
+ * [{"name": "sda", "size": 750156374016, "fstype": null, "label": null, "mountpoint": null,
+ *   "children": [
+ *      {"name": "sda1", "size": 104857600, "fstype": "ntfs", "label": "Win Reserved",
+ * "mountpoint": null, "uuid": null},      {"name": "sda2", "size": 536766054400, "fstype":
+ * "ntfs", "label": "SSD", "mountpoint": null, "uuid": null},      ...
+ *   ]
+ * }]
+ */
 pub fn blockdevices() -> Result<Vec<json::JsonValue>> {
     let lsblk = Command::new(lsblk_cmd())
         .arg("-Jbo")

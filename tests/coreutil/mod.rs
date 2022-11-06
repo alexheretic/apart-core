@@ -5,13 +5,13 @@ extern crate uuid;
 extern crate yaml_rust;
 extern crate zmq;
 
-use std::io::{Error, ErrorKind, Result};
-use std::io::{Read, Write};
-use std::path::{Path, PathBuf};
-use std::process::Stdio;
-use std::process::{Child, Command};
-use std::time::{Duration, Instant};
-use std::{env, fs};
+use std::{
+    env, fs,
+    io::{Error, ErrorKind, Read, Result, Write},
+    path::{Path, PathBuf},
+    process::{Child, Command, Stdio},
+    time::{Duration, Instant},
+};
 use yaml_rust::{Yaml, YamlLoader};
 
 pub struct CoreHandle {

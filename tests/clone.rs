@@ -1,12 +1,13 @@
 mod coreutil;
 
 use crate::coreutil::*;
-use chrono::prelude::*;
-use chrono::Duration as OldDuration;
+use chrono::{prelude::*, Duration as OldDuration};
 use log::warn;
-use std::path::Path;
-use std::process::{Command, Stdio};
-use std::time::{Duration, Instant};
+use std::{
+    path::Path,
+    process::{Command, Stdio},
+    time::{Duration, Instant},
+};
 
 // Tests asserting from a client's perspective performing a partition clone
 

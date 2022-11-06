@@ -1,6 +1,8 @@
 use crate::include::*;
-use std::io::ErrorKind;
-use std::process::{Command, Stdio};
+use std::{
+    io::ErrorKind,
+    process::{Command, Stdio},
+};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Compression {

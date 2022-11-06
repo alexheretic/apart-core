@@ -1,8 +1,7 @@
 mod coreutil;
 
 use crate::coreutil::*;
-use chrono::prelude::*;
-use chrono::Duration as OldDuration;
+use chrono::{prelude::*, Duration as OldDuration};
 use log::warn;
 use std::process::{Command, Stdio};
 

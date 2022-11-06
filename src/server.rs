@@ -1,17 +1,22 @@
-use crate::clone;
-use crate::clone::{CloneJob, CloneStatus};
-use crate::inbound::Request;
-use crate::inbound::Request::*;
-use crate::include::*;
-use crate::lsblk;
-use crate::outbound::*;
-use crate::restore::*;
-use std::collections::HashMap;
-use std::error::Error;
-use std::io::Result as IoResult;
-use std::marker::Send;
-use std::sync::mpsc::{channel, Receiver, Sender};
-use std::{fs, mem, thread};
+use crate::{
+    clone,
+    clone::{CloneJob, CloneStatus},
+    inbound::{Request, Request::*},
+    include::*,
+    lsblk,
+    outbound::*,
+    restore::*,
+};
+use std::{
+    collections::HashMap,
+    error::Error,
+    fs,
+    io::Result as IoResult,
+    marker::Send,
+    mem,
+    sync::mpsc::{channel, Receiver, Sender},
+    thread,
+};
 
 pub struct DeleteResult(pub String, pub IoResult<()>);
 
@@ -65,14 +70,14 @@ impl Server {
             let mut did_work = match self.socket.recv_string(0) {
                 Ok(Ok(msg)) => {
                     match Request::parse(&msg) {
-                        Some(StatusRequest) => {
+                        Some(Status) => {
                             self.zmq_send(&status_yaml("running", lsblk::blockdevices()?))?
                         }
-                        Some(KillRequest) => {
+                        Some(Kill) => {
                             info!("KillRequest received dying...");
                             return Ok(());
                         }
-                        Some(CloneRequest {
+                        Some(Clone {
                             source,
                             destination,
                             name,
@@ -84,7 +89,7 @@ impl Server {
                             }
                             Err(err) => error!("Clonejob creation failed: {}", err),
                         },
-                        Some(RestoreRequest {
+                        Some(Restore {
                             source,
                             destination,
                         }) => match RestoreJob::new(source, destination) {
@@ -94,7 +99,7 @@ impl Server {
                             }
                             Err(err) => error!("RestoreJob creation failed: {}", err),
                         },
-                        Some(CancelCloneRequest { id }) => {
+                        Some(CancelClone { id }) => {
                             if let Some(job) = self.clones.remove(&id) {
                                 // cancel clone concurrently as removing .inprogress image can be
                                 // slow
@@ -108,14 +113,14 @@ impl Server {
                                 });
                             }
                         }
-                        Some(CancelRestoreRequest { id }) => {
+                        Some(CancelRestore { id }) => {
                             if let Some(job) = self.restores.remove(&id) {
                                 let cancelled_msg = job.fail_status("Cancelled").to_yaml();
                                 mem::drop(job); // ensure actually cancelled before messaging
                                 self.zmq_send(&cancelled_msg)?;
                             }
                         }
-                        Some(DeleteImageRequest { file }) => {
+                        Some(DeleteImage { file }) => {
                             if clone::is_valid_image_name(&file) {
                                 let tx = self.io_master_sender.clone();
                                 thread::spawn(move || {

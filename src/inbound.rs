@@ -1,32 +1,31 @@
 use self::Request::*;
-use crate::compression::Compression;
-use crate::include::*;
+use crate::{compression::Compression, include::*};
 use yaml_rust::YamlLoader;
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Eq, Debug)]
 pub enum Request {
-    StatusRequest,
-    KillRequest,
+    Status,
+    Kill,
 
-    CloneRequest {
+    Clone {
         source: String,
         destination: String,
         name: String,
         compression: Compression,
     },
-    CancelCloneRequest {
+    CancelClone {
         id: String,
     },
 
-    RestoreRequest {
+    Restore {
         source: String,
         destination: String,
     },
-    CancelRestoreRequest {
+    CancelRestore {
         id: String,
     },
 
-    DeleteImageRequest {
+    DeleteImage {
         file: String,
     },
 }
@@ -38,10 +37,10 @@ impl Request {
             if let Some(msg) = docs.into_iter().next() {
                 let msg_type = msg["type"].as_str();
                 if let Some("status-request") = msg_type {
-                    return Some(StatusRequest);
+                    return Some(Status);
                 }
                 if let Some("kill-request") = msg_type {
-                    return Some(KillRequest);
+                    return Some(Kill);
                 }
                 if let (Some("clone"), Some(source), Some(dest), Some(name), compression) = (
                     msg_type,
@@ -64,7 +63,7 @@ impl Request {
                         }
                     };
 
-                    return Some(CloneRequest {
+                    return Some(Clone {
                         source: source.to_owned(),
                         destination: dest.to_owned(),
                         name: name.to_owned(),
@@ -76,19 +75,19 @@ impl Request {
                     msg["source"].as_str(),
                     msg["destination"].as_str(),
                 ) {
-                    return Some(RestoreRequest {
+                    return Some(Restore {
                         source: source.to_owned(),
                         destination: dest.to_owned(),
                     });
                 }
                 if let (Some("cancel-clone"), Some(id)) = (msg_type, msg["id"].as_str()) {
-                    return Some(CancelCloneRequest { id: id.to_owned() });
+                    return Some(CancelClone { id: id.to_owned() });
                 }
                 if let (Some("cancel-restore"), Some(id)) = (msg_type, msg["id"].as_str()) {
-                    return Some(CancelRestoreRequest { id: id.to_owned() });
+                    return Some(CancelRestore { id: id.to_owned() });
                 }
                 if let (Some("delete-clone"), Some(file)) = (msg_type, msg["file"].as_str()) {
-                    return Some(DeleteImageRequest {
+                    return Some(DeleteImage {
                         file: file.to_owned(),
                     });
                 }
@@ -104,12 +103,12 @@ mod tests {
 
     #[test]
     fn parse_status_request() {
-        assert_eq!(Request::parse("type: status-request"), Some(StatusRequest))
+        assert_eq!(Request::parse("type: status-request"), Some(Status))
     }
 
     #[test]
     fn parse_kill_request() {
-        assert_eq!(Request::parse("type: kill-request"), Some(KillRequest))
+        assert_eq!(Request::parse("type: kill-request"), Some(Kill))
     }
 
     #[test]
@@ -127,7 +126,7 @@ mod tests {
         );
         assert_eq!(
             message,
-            Some(CloneRequest {
+            Some(Clone {
                 source: "/dev/abc12".to_owned(),
                 destination: "/mnt/backups/".to_owned(),
                 name: "alex".to_owned(),
@@ -145,7 +144,7 @@ mod tests {
         );
         assert_eq!(
             message,
-            Some(RestoreRequest {
+            Some(Restore {
                 source: "/mnt/backups/sda1-2017-04-18T1739.apt.ext4.gz".to_owned(),
                 destination: "/dev/abc123".to_owned(),
             })
@@ -160,7 +159,7 @@ mod tests {
         );
         assert_eq!(
             message,
-            Some(CancelRestoreRequest {
+            Some(CancelRestore {
                 id: "uid13213".to_owned()
             })
         );

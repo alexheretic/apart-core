@@ -1,17 +1,18 @@
-use crate::child;
-use crate::clone::partclone_variant_from_image;
-use crate::compression::Compression;
-use crate::include::*;
-use crate::partclone;
-use crate::partclone::*;
+use crate::{
+    child, clone::partclone_variant_from_image, compression::Compression, include::*, partclone,
+    partclone::*,
+};
 use chrono::prelude::*;
-use std::cell::Cell;
-use std::error::Error;
-use std::os::unix::io::{FromRawFd, IntoRawFd};
-use std::process::{Child, Command, Stdio};
-use std::sync::mpsc;
-use std::sync::mpsc::Receiver;
-use std::{fmt, str, thread};
+use std::{
+    cell::Cell,
+    error::Error,
+    fmt,
+    os::unix::io::{FromRawFd, IntoRawFd},
+    process::{Child, Command, Stdio},
+    str,
+    sync::{mpsc, mpsc::Receiver},
+    thread,
+};
 use uuid::Uuid;
 
 #[derive(Debug)]

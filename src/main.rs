@@ -13,8 +13,7 @@ pub(crate) mod include {
     pub(crate) use log::{debug, error, info, trace, warn};
 }
 
-use crate::include::*;
-use crate::server::Server;
+use crate::{include::*, server::Server};
 use std::alloc::System;
 
 #[global_allocator]

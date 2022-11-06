@@ -1,6 +1,5 @@
 use crate::include::*;
-use std::sync::mpsc;
-use std::thread;
+use std::{sync::mpsc, thread};
 
 pub fn receiver<T, F>(func: F) -> mpsc::Receiver<T>
 where

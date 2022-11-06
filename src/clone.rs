@@ -1,25 +1,24 @@
-use crate::asynchronous;
-use crate::child;
-use crate::compression::Compression;
-use crate::include::*;
-use crate::lsblk;
-use crate::partclone;
-use crate::partclone::*;
+use crate::{
+    asynchronous, child, compression::Compression, include::*, lsblk, partclone, partclone::*,
+};
 use chrono::prelude::*;
 use regex::Regex;
-use std::cell::{Cell, RefCell};
-use std::error::Error;
-use std::fs::{File, Metadata};
-use std::io::{Error as IoError, ErrorKind, Result as IoResult};
-use std::os::unix::io::{FromRawFd, IntoRawFd, RawFd};
-use std::path::Path;
-use std::process::{Child, Command, Stdio};
-use std::sync::mpsc;
-use std::sync::mpsc::Receiver;
-use std::{fmt, fs, str, thread};
+use std::{
+    cell::{Cell, RefCell},
+    error::Error,
+    fmt, fs,
+    fs::{File, Metadata},
+    io::{Error as IoError, ErrorKind, Result as IoResult},
+    os::unix::io::{FromRawFd, IntoRawFd, RawFd},
+    path::Path,
+    process::{Child, Command, Stdio},
+    str,
+    sync::{mpsc, mpsc::Receiver},
+    thread,
+};
 use uuid::Uuid;
 
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Eq, Debug)]
 pub struct CloneStatusCommon {
     pub id: String,
     pub source: String,
@@ -253,7 +252,7 @@ impl CloneJob {
             }
         };
         let (dest_file, dest_raw_fd) =
-            destination_raw_fd(&destination, &name, &partclone_variant, z)?;
+            destination_raw_fd(destination, name, &partclone_variant, z)?;
 
         let mut partclone_cmd = {
             let mut args = Vec::new();
