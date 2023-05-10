@@ -217,6 +217,7 @@ Core will cancel all jobs and shutdown (sending the dying status above)
 
 ## Dependencies
 * zeromq >= 4.1
+* util-linux >= 2.28.2
 * partclone
 * pigz
 * lz4 *(optional: adds compression option)*
