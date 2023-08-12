@@ -199,9 +199,7 @@ pub fn status_yaml(status: &str, lsblk: Vec<JsonValue>) -> String {
                 parse_size(&device["size"]),
                 &device["children"],
             ) {
-                (Some(name), Some(size), &JsonValue::Array(ref children))
-                    if !children.is_empty() =>
-                {
+                (Some(name), Some(size), JsonValue::Array(children)) if !children.is_empty() => {
                     let mut source = yaml::Hash::new();
                     source.insert(Yaml::from_str("name"), Yaml::from_str(name));
                     source.insert(Yaml::from_str("size"), Yaml::from_str(&format!("{}", size)));

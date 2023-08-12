@@ -21,7 +21,8 @@ fn lsblk_cmd() -> String {
  * }]
  */
 pub fn blockdevices() -> Result<Vec<json::JsonValue>> {
-    let lsblk = Command::new(lsblk_cmd())
+    let cmd = lsblk_cmd();
+    let lsblk = Command::new(&cmd)
         .arg("-Jbo")
         .arg("name,size,fstype,label,mountpoint,uuid")
         .stdout(Stdio::piped())
@@ -34,7 +35,7 @@ pub fn blockdevices() -> Result<Vec<json::JsonValue>> {
         },
         Err(err) => Err(Error::new(
             ErrorKind::InvalidData,
-            format!("json invalid: {}", err),
+            format!("{cmd} invalid json output: {err}"),
         )),
     }
 }
