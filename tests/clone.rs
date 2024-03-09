@@ -1,7 +1,7 @@
 mod coreutil;
 
 use crate::coreutil::*;
-use chrono::{prelude::*, Duration as OldDuration};
+use chrono::{prelude::*, TimeDelta};
 use log::warn;
 use std::{
     path::Path,
@@ -17,7 +17,8 @@ fn do_clone_job() {
 
     let core = CoreHandle::new().unwrap();
     // default estimated remaining duration in mock partclone
-    let mock_duration = OldDuration::minutes(3) + OldDuration::seconds(2);
+    let mock_duration = TimeDelta::try_minutes(3).unwrap()
+        + TimeDelta::try_seconds(2).unwrap();
 
     let clone_msg = format!(
         "type: clone\n\
@@ -38,7 +39,9 @@ fn do_clone_job() {
     let id = msg["id"].as_str();
     let start = msg["start"].as_str();
     // ensure we get a timely initial message not waiting for partclone rate/estimated remaining
-    assert!(Utc::now().signed_duration_since(send_time) <= OldDuration::milliseconds(500));
+    assert!(
+        Utc::now().signed_duration_since(send_time) <= TimeDelta::try_milliseconds(500).unwrap()
+    );
 
     let msg = core.expect_message_with(|msg| {
         msg["type"].as_str() == Some("clone") && msg["rate"].as_str().is_some()
@@ -89,7 +92,7 @@ fn do_clone_job() {
 
     let finish_time_diff =
         estimated_finish_time.signed_duration_since(expected_estimated_finished_time);
-    if abs(finish_time_diff) > OldDuration::seconds(1) {
+    if abs(finish_time_diff) > TimeDelta::try_seconds(1).unwrap() {
         assert_eq!(
             estimated_finish_time, expected_estimated_finished_time,
             "expected within a second"
@@ -130,8 +133,8 @@ fn do_clone_job() {
     );
 }
 
-fn abs(duration: OldDuration) -> OldDuration {
-    if duration < OldDuration::zero() {
+fn abs(duration: TimeDelta) -> TimeDelta {
+    if duration < TimeDelta::zero() {
         return duration * -1;
     }
     duration

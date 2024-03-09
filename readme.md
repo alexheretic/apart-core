@@ -35,7 +35,7 @@ zmq_socket = zmq_ctx.socket(zmq.PAIR)
 zmq_address = 'ipc:///tmp/apart.ipc'
 zmq_socket.bind(zmq_address)
 
-# start apart-core refering it to our ZMQ address
+# start apart-core referring it to our ZMQ address
 subprocess.Popen(['apart-core', zmq_address])
 
 # receive the initial status message
@@ -77,7 +77,7 @@ source_uuid: 32b35cf2-052b-4a31-8f3b-c3e4bfeaa689  # partition UUID if available
 rate: 9.87GB/min  # string describing the rate the job is currently enjoying, present when available
 estimated_finish: 2017-04-18T17:40:03Z  # zoned time of estimated finish, present when available
 
-# present when job has finished sucessfully
+# present when job has finished successfully
 finish: 2017-04-18T17:40:02Z  # utc time of finish
 image_size: 536766054400  # size of created image file (bytes)
 ```
@@ -144,7 +144,7 @@ start: 2017-04-18T17:39:01Z  # utc time of start
 rate: 9.87GB/min  # string describing the rate the job is currently enjoying, present when available
 estimated_finish: 2017-04-18T17:40:03Z  # zoned time of estimated finish, present when available
 
-# present when job has finished sucessfully
+# present when job has finished successfully
 finish: 2017-04-18T17:40:02Z  # utc time of finish
 ```
 To cancel a restore send:

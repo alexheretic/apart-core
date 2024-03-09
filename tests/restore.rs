@@ -1,7 +1,7 @@
 mod coreutil;
 
 use crate::coreutil::*;
-use chrono::{prelude::*, Duration as OldDuration};
+use chrono::{prelude::*, TimeDelta};
 use log::warn;
 use std::process::{Command, Stdio};
 
@@ -13,7 +13,7 @@ static MOCK_IMAGE_CONTENTS: &str = "mock-partition-/dev/sda5-data";
 fn restore_success() {
     let core = CoreHandle::new().unwrap();
     // default estimated remaining duration in mock partclone
-    let mock_duration = OldDuration::minutes(3) + OldDuration::seconds(2);
+    let mock_duration = TimeDelta::try_minutes(3).unwrap() + TimeDelta::try_seconds(2).unwrap();
 
     let source_image = format!("{}/{}", core.tmp_dir(), "mockimg-2017-04-20T1500.apt.dd.gz");
     let clone_msg = format!(
@@ -68,7 +68,7 @@ fn restore_success() {
 
     let finish_time_diff =
         estimated_finish_time.signed_duration_since(expected_estimated_finished_time);
-    if abs(finish_time_diff) > OldDuration::seconds(1) {
+    if abs(finish_time_diff) > TimeDelta::try_seconds(1).unwrap() {
         assert_eq!(
             estimated_finish_time, expected_estimated_finished_time,
             "expected within a second"
@@ -105,8 +105,8 @@ fn restore_success() {
     );
 }
 
-fn abs(duration: OldDuration) -> OldDuration {
-    if duration < OldDuration::zero() {
+fn abs(duration: TimeDelta) -> TimeDelta {
+    if duration < TimeDelta::zero() {
         return duration * -1;
     }
     duration

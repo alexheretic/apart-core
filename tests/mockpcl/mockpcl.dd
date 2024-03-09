@@ -88,7 +88,7 @@ function read_control {
   fi
 }
 
-## mimick partclone output
+## mimic partclone output
 echo_output_head_p1
 sleep 0.05  # wait 50ms before rate, estimated_finish are available
 echo_output_head_p2

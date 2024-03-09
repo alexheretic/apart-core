@@ -1,5 +1,5 @@
 use crate::include::*;
-use chrono::{prelude::*, Duration as OldDuration};
+use chrono::{prelude::*, TimeDelta};
 use regex::Regex;
 use std::{
     env,
@@ -98,7 +98,7 @@ pub fn read_output(
 
     let mut partclone_out_tail = Vec::new();
 
-    for line in BufReader::new(stderr).lines().flatten() {
+    for line in BufReader::new(stderr).lines().map_while(Result::ok) {
         let out = Rc::new(line);
         partclone_out_tail.push(out.clone());
         if partclone_out_tail.len() > PARTCLONE_LOG_TAIL {
@@ -115,9 +115,9 @@ pub fn read_output(
                             cap[2].parse::<i64>(),
                             cap[3].parse::<i64>(),
                         ) {
-                            let remaining = OldDuration::hours(hours)
-                                + OldDuration::minutes(minutes)
-                                + OldDuration::seconds(seconds);
+                            let remaining = TimeDelta::try_hours(hours).unwrap_or_default()
+                                + TimeDelta::try_minutes(minutes).unwrap_or_default()
+                                + TimeDelta::try_seconds(seconds).unwrap_or_default();
                             estimated_finish = Some(Utc::now() + remaining);
                         }
                     }
