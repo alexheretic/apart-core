@@ -225,6 +225,7 @@ impl CoreHandle {
         let mut file = fs::OpenOptions::new()
             .write(true)
             .create(true)
+            .truncate(false)
             .open(self.path_of(&format!(".control.mockpcl.{}", variant)))?;
         write!(
             file,
