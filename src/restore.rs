@@ -128,7 +128,7 @@ impl<'j> RestoreJob {
             .spawn()?;
 
         let mut z_process = Command::new(z.command)
-            .arg(z.read_args)
+            .args(z.read_args)
             .stdout(Stdio::piped())
             .stdin(unsafe {
                 Stdio::from_raw_fd(cat.stdout.take().expect("!cat.stdout").into_raw_fd())

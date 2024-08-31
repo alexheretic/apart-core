@@ -271,7 +271,7 @@ impl CloneJob {
         };
 
         let compress_cmd = Command::new(z.command)
-            .arg(z.write_args)
+            .args(z.write_args)
             .stdin(unsafe {
                 Stdio::from_raw_fd(partclone_cmd.stdout.take().unwrap().into_raw_fd())
             })

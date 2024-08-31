@@ -9,48 +9,47 @@ pub struct Compression {
     /// reported name, also used as file extension
     pub name: &'static str,
     pub command: &'static str,
-    pub write_args: &'static str,
-    pub read_args: &'static str,
+    pub write_args: &'static [&'static str],
+    pub read_args: &'static [&'static str],
 }
 
 // ~110 MB/s per core, compression 100->25
 const PIGZ: Compression = Compression {
     name: "gz",
     command: "pigz",
-    write_args: "-1c",
-    read_args: "-dc",
+    write_args: &["-1c"],
+    read_args: &["-dc"],
 };
 // ~1250 MB/s single threaded, compression 100->30
 const LZ4: Compression = Compression {
     name: "lz4",
     command: "lz4",
-    write_args: "-c",
-    read_args: "-dc",
+    write_args: &["-c"],
+    read_args: &["-dc"],
 };
 // ~450 MB/s per core, compression 100->22
 const ZSTD: Compression = Compression {
     name: "zst",
-    command: "zstdmt",
-    write_args: "-c",
-    read_args: "-dc",
+    command: "zstd",
+    write_args: &["-T0", "-c"],
+    // support up to --long=31 recompression
+    read_args: &["-T0", "--long=31", "-dc"],
 };
 const NONE: Compression = Compression {
     name: "uncompressed",
     command: "cat",
-    write_args: "-",
-    read_args: "-",
+    write_args: &["-"],
+    read_args: &["-"],
 };
 
 const ALL: &[Compression] = &[PIGZ, NONE, ZSTD, LZ4];
 
 impl Compression {
     pub fn from_name(name: &str) -> Result<Compression, String> {
-        for z in ALL {
-            if z.name == name {
-                return Ok(*z);
-            }
-        }
-        Err(format!("Unknown compression name `{}`", name))
+        ALL.iter()
+            .find(|z| z.name == name)
+            .copied()
+            .ok_or_else(|| format!("Unknown compression name `{}`", name))
     }
 
     pub fn from_file_name(file: &str) -> Result<Compression, String> {
@@ -66,14 +65,8 @@ impl Compression {
         Err(format!("Unknown compression used in file `{}`", file))
     }
 
-    pub fn all_installed() -> Vec<Compression> {
-        let mut available = vec![];
-        for z in ALL {
-            if z.is_installed() {
-                available.push(*z);
-            }
-        }
-        available
+    pub fn all_installed() -> impl Iterator<Item = Compression> {
+        ALL.iter().filter(|z| z.is_installed()).copied()
     }
 
     fn is_installed(self) -> bool {
