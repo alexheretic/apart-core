@@ -14,7 +14,7 @@ use std::{
     io::Result as IoResult,
     marker::Send,
     mem,
-    sync::mpsc::{channel, Receiver, Sender},
+    sync::mpsc::{Receiver, Sender, channel},
     thread,
 };
 

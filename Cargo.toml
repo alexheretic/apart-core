@@ -2,7 +2,7 @@
 name = "apart-core"
 version = "0.3.15"
 authors = ["Alex Butler <alexheretic@gmail.com>"]
-edition = "2021"
+edition = "2024"
 
 [dependencies]
 chrono = "0.4"

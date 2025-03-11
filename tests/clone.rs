@@ -1,7 +1,7 @@
 mod coreutil;
 
 use crate::coreutil::*;
-use chrono::{prelude::*, TimeDelta};
+use chrono::{TimeDelta, prelude::*};
 use log::warn;
 use std::{
     path::Path,
@@ -17,8 +17,7 @@ fn do_clone_job() {
 
     let core = CoreHandle::new().unwrap();
     // default estimated remaining duration in mock partclone
-    let mock_duration = TimeDelta::try_minutes(3).unwrap()
-        + TimeDelta::try_seconds(2).unwrap();
+    let mock_duration = TimeDelta::try_minutes(3).unwrap() + TimeDelta::try_seconds(2).unwrap();
 
     let clone_msg = format!(
         "type: clone\n\
@@ -67,9 +66,11 @@ fn do_clone_job() {
         "partclone.dd invoked with '-c'"
     );
 
-    assert!(!core
-        .path_of(&format!("{}/{}", core.tmp_dir(), expected_filename))
-        .exists());
+    assert!(
+        !core
+            .path_of(&format!("{}/{}", core.tmp_dir(), expected_filename))
+            .exists()
+    );
 
     core.set_mock_partclone(
         "dd",
@@ -101,9 +102,11 @@ fn do_clone_job() {
     assert_eq!(msg["start"].as_str(), start);
     assert_eq!(msg["finish"].as_str(), None);
 
-    assert!(!core
-        .path_of(&format!("{}/{}", core.tmp_dir(), expected_filename))
-        .exists());
+    assert!(
+        !core
+            .path_of(&format!("{}/{}", core.tmp_dir(), expected_filename))
+            .exists()
+    );
 
     core.set_mock_partclone(
         "dd",
