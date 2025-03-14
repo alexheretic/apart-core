@@ -1,6 +1,6 @@
 [package]
 name = "apart-core"
-version = "0.3.15"
+version = "0.3.16"
 authors = ["Alex Butler <alexheretic@gmail.com>"]
 edition = "2024"
 
