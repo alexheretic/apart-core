@@ -22,7 +22,7 @@ static GLOBAL: System = System;
 fn main() {
     env_logger::init();
 
-    match std::env::args().take(2).last() {
+    match std::env::args().nth(1) {
         Some(arg) => {
             if arg.starts_with("ipc://") {
                 if let Err(err) = Server::start_at(&arg) {

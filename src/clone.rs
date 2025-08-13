@@ -316,10 +316,10 @@ impl Drop for CloneJob {
         child::drop_log_errors(&mut self.compress_cmd.borrow_mut(), "CloneJob#compress_cmd");
 
         let inprogress_file = Path::new(&self.destination);
-        if inprogress_file.exists() {
-            if let Err(err) = fs::remove_file(inprogress_file) {
-                error!("Could not rm inprogress clone: {}", err);
-            }
+        if inprogress_file.exists()
+            && let Err(err) = fs::remove_file(inprogress_file)
+        {
+            error!("Could not rm inprogress clone: {}", err);
         }
     }
 }

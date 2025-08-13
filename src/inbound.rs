@@ -33,64 +33,64 @@ pub enum Request {
 impl Request {
     /// Parses a yaml string to a Request struct, all errors -> None
     pub fn parse(yaml: &str) -> Option<Request> {
-        if let Ok(docs) = YamlLoader::load_from_str(yaml) {
-            if let Some(msg) = docs.into_iter().next() {
-                let msg_type = msg["type"].as_str();
-                if let Some("status-request") = msg_type {
-                    return Some(Status);
-                }
-                if let Some("kill-request") = msg_type {
-                    return Some(Kill);
-                }
-                if let (Some("clone"), Some(source), Some(dest), Some(name), compression) = (
-                    msg_type,
-                    msg["source"].as_str(),
-                    msg["destination"].as_str(),
-                    msg["name"].as_str(),
-                    msg["compression"].as_str(),
-                ) {
-                    let z = {
-                        if let Some(name) = compression {
-                            match Compression::from_name(name) {
-                                Ok(z) => z,
-                                Err(err) => {
-                                    warn!("{}", err);
-                                    return None;
-                                }
+        if let Ok(docs) = YamlLoader::load_from_str(yaml)
+            && let Some(msg) = docs.into_iter().next()
+        {
+            let msg_type = msg["type"].as_str();
+            if let Some("status-request") = msg_type {
+                return Some(Status);
+            }
+            if let Some("kill-request") = msg_type {
+                return Some(Kill);
+            }
+            if let (Some("clone"), Some(source), Some(dest), Some(name), compression) = (
+                msg_type,
+                msg["source"].as_str(),
+                msg["destination"].as_str(),
+                msg["name"].as_str(),
+                msg["compression"].as_str(),
+            ) {
+                let z = {
+                    if let Some(name) = compression {
+                        match Compression::from_name(name) {
+                            Ok(z) => z,
+                            Err(err) => {
+                                warn!("{}", err);
+                                return None;
                             }
-                        } else {
-                            Compression::default()
                         }
-                    };
+                    } else {
+                        Compression::default()
+                    }
+                };
 
-                    return Some(Clone {
-                        source: source.to_owned(),
-                        destination: dest.to_owned(),
-                        name: name.to_owned(),
-                        compression: z,
-                    });
-                }
-                if let (Some("restore"), Some(source), Some(dest)) = (
-                    msg_type,
-                    msg["source"].as_str(),
-                    msg["destination"].as_str(),
-                ) {
-                    return Some(Restore {
-                        source: source.to_owned(),
-                        destination: dest.to_owned(),
-                    });
-                }
-                if let (Some("cancel-clone"), Some(id)) = (msg_type, msg["id"].as_str()) {
-                    return Some(CancelClone { id: id.to_owned() });
-                }
-                if let (Some("cancel-restore"), Some(id)) = (msg_type, msg["id"].as_str()) {
-                    return Some(CancelRestore { id: id.to_owned() });
-                }
-                if let (Some("delete-clone"), Some(file)) = (msg_type, msg["file"].as_str()) {
-                    return Some(DeleteImage {
-                        file: file.to_owned(),
-                    });
-                }
+                return Some(Clone {
+                    source: source.to_owned(),
+                    destination: dest.to_owned(),
+                    name: name.to_owned(),
+                    compression: z,
+                });
+            }
+            if let (Some("restore"), Some(source), Some(dest)) = (
+                msg_type,
+                msg["source"].as_str(),
+                msg["destination"].as_str(),
+            ) {
+                return Some(Restore {
+                    source: source.to_owned(),
+                    destination: dest.to_owned(),
+                });
+            }
+            if let (Some("cancel-clone"), Some(id)) = (msg_type, msg["id"].as_str()) {
+                return Some(CancelClone { id: id.to_owned() });
+            }
+            if let (Some("cancel-restore"), Some(id)) = (msg_type, msg["id"].as_str()) {
+                return Some(CancelRestore { id: id.to_owned() });
+            }
+            if let (Some("delete-clone"), Some(file)) = (msg_type, msg["file"].as_str()) {
+                return Some(DeleteImage {
+                    file: file.to_owned(),
+                });
             }
         }
         None
