@@ -79,8 +79,8 @@ impl TmpDir {
                 &file_path,
                 format!(
                     "{}/{}",
-                    &tmp_dir,
-                    &file_path.file_name().unwrap().to_str().unwrap()
+                    tmp_dir,
+                    file_path.file_name().unwrap().to_str().unwrap()
                 ),
             )
             .expect("copy failed");
