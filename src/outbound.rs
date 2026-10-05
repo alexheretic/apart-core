@@ -295,13 +295,13 @@ mod tests {
 
     #[test]
     fn status_started_yaml() {
-        let lsblk_json = vec!(json::parse(r#"
+        let lsblk_json = vec![json::parse(r#"
       {"name": "sda", "size": 750156374016, "fstype": null, "label": null, "mountpoint": null,
         "children": [
           {"name": "sda2", "size": 536766054400, "fstype": null, "label": null, "mountpoint": null},
           {"name": "sda3", "size": 181070200832, "fstype": "ext4", "label": "Arch", "mountpoint": "/"}
         ]
-      }"#).unwrap());
+      }"#).unwrap()];
         let yaml = YamlLoader::load_from_str(&status_yaml("started", lsblk_json))
             .unwrap()
             .remove(0);
