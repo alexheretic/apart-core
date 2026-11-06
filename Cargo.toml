@@ -1,8 +1,9 @@
 [package]
 name = "apart-core"
-version = "0.3.16"
+version = "0.3.17"
 authors = ["Alex Butler <alexheretic@gmail.com>"]
 edition = "2024"
+publish = false
 
 [dependencies]
 chrono = "0.4"
